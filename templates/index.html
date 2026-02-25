@@ -1396,6 +1396,23 @@ function scheduleRender() {
     }
 }
 
+/* Reusable offscreen canvases for composite rendering */
+let _offscreen = null, _offCtx = null;
+let _borderBuf = null, _borderCtx = null;
+
+function ensureOffscreen() {
+    if (!_offscreen || _offscreen.width !== canvas.width || _offscreen.height !== canvas.height) {
+        _offscreen = document.createElement("canvas");
+        _borderBuf = document.createElement("canvas");
+    }
+    _offscreen.width = canvas.width;
+    _offscreen.height = canvas.height;
+    _borderBuf.width = canvas.width;
+    _borderBuf.height = canvas.height;
+    _offCtx = _offscreen.getContext("2d");
+    _borderCtx = _borderBuf.getContext("2d");
+}
+
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!state.frameImage) return;
@@ -1403,60 +1420,60 @@ function render() {
     const t = getTransform();
     ctx.drawImage(state.frameImage, t.ox, t.oy, state.video.width * t.scale, state.video.height * t.scale);
 
-    /* Build composite selection: add regions then subtract regions.
-       Use an offscreen canvas as a mask so subtracts cut clean holes. */
     const allRegions = state.regions.slice();
-    /* Include current lasso as a temporary region while drawing */
     const drawingActive = state.isDrawing && state.currentLasso.length >= 2;
+    const hasAdd = allRegions.some(r => !r.subtract) || (drawingActive && !state.subtractMode);
 
-    const hasRegions = allRegions.length > 0 || (drawingActive && !state.subtractMode);
-    if (hasRegions || drawingActive) {
-        /* Offscreen mask: white = selected, black = not */
-        const offscreen = document.createElement("canvas");
-        offscreen.width = canvas.width;
-        offscreen.height = canvas.height;
-        const mctx = offscreen.getContext("2d");
+    if (hasAdd || allRegions.length > 0) {
+        ensureOffscreen();
+
+        /* Build composite mask on offscreen canvas */
+        _offCtx.clearRect(0, 0, _offscreen.width, _offscreen.height);
 
         /* Paint add regions */
+        _offCtx.globalCompositeOperation = "source-over";
         allRegions.forEach(r => {
-            if (!r.subtract && r.points.length >= 3) {
-                drawPolyOnCtx(mctx, r.points, true);
-            }
+            if (!r.subtract && r.points.length >= 3)
+                fillPolyOnCtx(_offCtx, r.points);
         });
 
-        /* Paint subtract regions (erase from mask) */
-        mctx.globalCompositeOperation = "destination-out";
+        /* Paint subtract regions (erase) */
+        _offCtx.globalCompositeOperation = "destination-out";
         allRegions.forEach(r => {
-            if (r.subtract && r.points.length >= 3) {
-                drawPolyOnCtx(mctx, r.points, true);
-            }
+            if (r.subtract && r.points.length >= 3)
+                fillPolyOnCtx(_offCtx, r.points);
         });
-        mctx.globalCompositeOperation = "source-over";
+        _offCtx.globalCompositeOperation = "source-over";
 
-        /* Apply the mask as a green overlay on the main canvas */
+        /* Green fill overlay */
         ctx.save();
         ctx.globalAlpha = 0.15;
-        ctx.drawImage(offscreen, 0, 0);
+        ctx.drawImage(_offscreen, 0, 0);
         ctx.globalAlpha = 1.0;
         ctx.restore();
 
-        /* Draw outlines for add regions (green) */
-        allRegions.forEach(r => {
-            if (!r.subtract && r.points.length >= 3) {
-                drawLassoStroke(r.points, "#39d353", "rgba(57, 211, 83, 0.5)", false);
-            }
+        /* Border: dilate the mask, subtract the interior, leaving a 2px outline */
+        _borderCtx.clearRect(0, 0, _borderBuf.width, _borderBuf.height);
+        const offsets = [[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,-1],[-1,1],[1,1]];
+        offsets.forEach(([dx, dy]) => {
+            _borderCtx.drawImage(_offscreen, dx, dy);
         });
+        _borderCtx.globalCompositeOperation = "destination-out";
+        _borderCtx.drawImage(_offscreen, 0, 0);
+        _borderCtx.globalCompositeOperation = "source-over";
+
+        ctx.drawImage(_borderBuf, 0, 0);
     }
 
-    /* Draw current lasso stroke while drawing */
+    /* Draw current lasso stroke while actively drawing */
     if (drawingActive) {
         const color = state.subtractMode ? "#f85149" : "#39d353";
         const glow = state.subtractMode ? "rgba(248, 81, 73, 0.5)" : "rgba(57, 211, 83, 0.5)";
-        drawLassoStroke(state.currentLasso, color, glow, true);
+        drawLassoStroke(state.currentLasso, color, glow);
     }
 }
 
-function drawPolyOnCtx(c, pts, fill) {
+function fillPolyOnCtx(c, pts) {
     const [sx, sy] = frameToCanvas(pts[0][0], pts[0][1]);
     c.beginPath();
     c.moveTo(sx, sy);
@@ -1465,17 +1482,14 @@ function drawPolyOnCtx(c, pts, fill) {
         c.lineTo(px, py);
     }
     c.closePath();
-    if (fill) {
-        c.fillStyle = "#39d353";
-        c.fill();
-    }
+    c.fillStyle = "#39d353";
+    c.fill();
 }
 
-function drawLassoStroke(pts, color, glowColor, isActive) {
+function drawLassoStroke(pts, color, glowColor) {
     if (pts.length < 2) return;
     const [sx, sy] = frameToCanvas(pts[0][0], pts[0][1]);
 
-    /* Stroke with glow */
     ctx.save();
     ctx.shadowColor = glowColor;
     ctx.shadowBlur = 6;
@@ -1485,14 +1499,13 @@ function drawLassoStroke(pts, color, glowColor, isActive) {
         const [px, py] = frameToCanvas(pts[i][0], pts[i][1]);
         ctx.lineTo(px, py);
     }
-    if (!isActive) ctx.closePath();
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.restore();
 
-    /* Dashed closing line while drawing */
-    if (isActive && pts.length >= 3) {
+    /* Dashed closing line */
+    if (pts.length >= 3) {
         const last = pts[pts.length - 1];
         const [lx, ly] = frameToCanvas(last[0], last[1]);
         ctx.beginPath();
