@@ -251,6 +251,63 @@ body {
 
 .skip-input:focus { border-color: var(--accent); }
 
+/* -- Save+Skip Toggle -- */
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    cursor: pointer;
+}
+
+.toggle-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.toggle-switch {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-overlay);
+    border-radius: 9px;
+    transition: background var(--transition);
+}
+
+.toggle-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: var(--text-secondary);
+    border-radius: 50%;
+    transition: all var(--transition);
+}
+
+.toggle-switch input:checked + .toggle-track {
+    background: var(--accent);
+}
+
+.toggle-switch input:checked + .toggle-track::after {
+    left: 16px;
+    background: #fff;
+}
+
 /* -- Class Selector -- */
 .class-search-wrap {
     position: relative;
@@ -841,6 +898,13 @@ canvas {
                 <span class="skip-label">Skip:</span>
                 <input type="number" class="skip-input" id="skip-input" value="1" min="1" max="9999">
             </div>
+            <label class="toggle-row" id="save-skip-toggle">
+                <span class="toggle-label">Save + skip</span>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="save-skip-cb">
+                    <span class="toggle-track"></span>
+                </div>
+            </label>
         </div>
 
         <!-- Class Selector -->
@@ -997,6 +1061,8 @@ const state = {
     lastSave: null,
     // Modal
     helpOpen: false,
+    // Save-skip mode
+    saveSkipFrame: false,
 };
 
 const canvas = $("#canvas");
@@ -1528,6 +1594,10 @@ $("#skip-input").addEventListener("change", (e) => {
     setSkip(parseInt(e.target.value) || 1);
 });
 
+$("#save-skip-cb").addEventListener("change", (e) => {
+    state.saveSkipFrame = e.target.checked;
+});
+
 /* ============================================================
    FRAME NAVIGATION
    ============================================================ */
@@ -1602,6 +1672,9 @@ async function saveCutout() {
             setStatus("Ready");
             showToast("Saved: " + data.filename + " (" + data.size[0] + "x" + data.size[1] + ")", "success");
             loadClasses();
+            if (state.saveSkipFrame) {
+                loadFrame(state.frame + state.skip);
+            }
         } else {
             setStatus("Ready");
             showToast("Save failed: " + (data.error || "Unknown error"), "error");
