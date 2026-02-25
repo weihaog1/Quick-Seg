@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sprite Cutout Creator - Setup</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bg-deep: #0d1117;
+    --bg-surface: #161b22;
+    --bg-elevated: #21262d;
+    --bg-overlay: #30363d;
+    --border: #30363d;
+    --border-subtle: #21262d;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-tertiary: #6e7681;
+    --accent: #58a6ff;
+    --accent-hover: #79c0ff;
+    --success: #3fb950;
+    --danger: #f85149;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --transition: 150ms ease;
+}
+
+body {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-overlay); border-radius: 3px; }
+
+.setup-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 40px;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.setup-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.setup-logo {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.setup-logo svg { width: 18px; height: 18px; }
+
+.setup-title {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.setup-subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 28px;
+}
+
+.section-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+    margin-bottom: 10px;
+}
+
+/* Drop Zone */
+.drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.drop-zone:hover {
+    border-color: var(--accent);
+    background: rgba(88, 166, 255, 0.04);
+}
+
+.drop-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(88, 166, 255, 0.08);
+    border-style: solid;
+}
+
+.drop-zone.uploading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.drop-zone-icon {
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+}
+
+.drop-zone-text {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.drop-zone-text strong {
+    color: var(--accent);
+    font-weight: 500;
+}
+
+.drop-zone-hint {
+    color: var(--text-tertiary);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+/* Upload status */
+.upload-status {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    min-height: 20px;
+}
+
+.upload-status.success { color: var(--success); }
+.upload-status.error { color: var(--danger); }
+
+.upload-progress {
+    width: 100%;
+    height: 4px;
+    background: var(--bg-elevated);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+    display: none;
+}
+
+.upload-progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 200ms ease;
+    width: 0%;
+}
+
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    color: var(--text-tertiary);
+    font-size: 12px;
+}
+
+.divider::before,
+.divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border-subtle);
+}
+
+/* Video List */
+.video-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 24px;
+}
+
+.video-list-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 13px;
+}
+
+.video-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background var(--transition);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.video-item:last-child { border-bottom: none; }
+
+.video-item:hover { background: var(--bg-elevated); }
+
+.video-item.selected {
+    background: var(--bg-elevated);
+    border-left: 3px solid var(--accent);
+    padding-left: 11px;
+}
+
+.video-item-name {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.video-item-size {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+/* Output dir */
+.output-section { margin-bottom: 24px; }
+
+.output-input {
+    width: 100%;
+    height: 40px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 0 14px;
+    outline: none;
+    transition: border-color var(--transition);
+}
+
+.output-input:focus { border-color: var(--accent); }
+
+/* Output row with browse button */
+.output-row {
+    display: flex;
+    gap: 8px;
+}
+
+.output-row .output-input { flex: 1; }
+
+.browse-btn {
+    height: 40px;
+    padding: 0 14px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.browse-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+/* Folder browser modal */
+.fb-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms;
+}
+
+.fb-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.fb-modal {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    width: 480px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.fb-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.fb-path {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    word-break: break-all;
+}
+
+.fb-list {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    min-height: 160px;
+    max-height: 320px;
+    margin-bottom: 16px;
+}
+
+.fb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background var(--transition);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+}
+
+.fb-item:last-child { border-bottom: none; }
+.fb-item:hover { background: var(--bg-elevated); }
+
+.fb-item-icon {
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+}
+
+.fb-item-parent {
+    color: var(--accent);
+    font-weight: 500;
+}
+
+.fb-item-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fb-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 13px;
+}
+
+.fb-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.fb-btn {
+    height: 36px;
+    padding: 0 16px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    border: 1px solid var(--border);
+}
+
+.fb-btn-cancel {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+}
+
+.fb-btn-cancel:hover {
+    color: var(--text-primary);
+    border-color: var(--text-tertiary);
+}
+
+.fb-btn-select {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.fb-btn-select:hover { background: var(--accent-hover); }
+
+/* Start button */
+.start-btn {
+    width: 100%;
+    height: 44px;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-md);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.start-btn:hover:not(:disabled) { background: var(--accent-hover); }
+
+.start-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.start-btn:active:not(:disabled) { transform: scale(0.98); }
+
+/* Error message */
+.error-msg {
+    color: var(--danger);
+    font-size: 13px;
+    margin-top: 12px;
+    min-height: 20px;
+}
+</style>
+</head>
+<body>
+
+<div class="setup-card">
+    <div class="setup-header">
+        <div class="setup-logo">
+            <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2">
+                <rect x="2" y="2" width="12" height="12" rx="2"/>
+                <path d="M5 8h6M8 5v6"/>
+            </svg>
+        </div>
+        <span class="setup-title">Sprite Cutout Creator</span>
+    </div>
+    <p class="setup-subtitle">Select a video and output directory to begin.</p>
+
+    <div class="section-label">Video</div>
+
+    <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M16 20V8M16 8l-5 5M16 8l5 5"/>
+                <path d="M6 22v2a2 2 0 002 2h16a2 2 0 002-2v-2"/>
+            </svg>
+        </div>
+        <div class="drop-zone-text">Drag and drop a video file, or <strong>click to browse</strong></div>
+        <div class="drop-zone-hint">.mp4, .avi, .mkv, .mov, .webm</div>
+    </div>
+    <input type="file" id="file-input" accept=".mp4,.avi,.mkv,.mov,.webm" style="display:none">
+    <div class="upload-status" id="upload-status"></div>
+    <div class="upload-progress" id="upload-progress">
+        <div class="upload-progress-bar" id="upload-progress-bar"></div>
+    </div>
+
+    <div class="divider">Or choose from server</div>
+
+    <div class="video-list" id="video-list">
+        <div class="video-list-empty">Loading...</div>
+    </div>
+
+    <div class="output-section">
+        <div class="section-label">Output Directory</div>
+        <div class="output-row">
+            <input type="text" class="output-input" id="output-dir" value="./output" placeholder="./output">
+            <button class="browse-btn" id="browse-btn">Browse</button>
+        </div>
+    </div>
+
+    <!-- Folder Browser Modal -->
+    <div class="fb-overlay" id="fb-overlay">
+        <div class="fb-modal">
+            <div class="fb-title">Choose Output Folder</div>
+            <div class="fb-path" id="fb-path">Loading...</div>
+            <div class="fb-list" id="fb-list"></div>
+            <div class="fb-actions">
+                <button class="fb-btn fb-btn-cancel" id="fb-cancel">Cancel</button>
+                <button class="fb-btn fb-btn-select" id="fb-select">Select This Folder</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="start-btn" id="start-btn" disabled>
+        Start Annotating
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 8h10M9 4l4 4-4 4"/>
+        </svg>
+    </button>
+
+    <div class="error-msg" id="error-msg"></div>
+</div>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+
+let selectedVideo = null;
+let selectedSource = null; // "server" or "upload"
+
+// --- Drop Zone ---
+const dropZone = $("#drop-zone");
+const fileInput = $("#file-input");
+
+dropZone.addEventListener("click", () => fileInput.click());
+
+dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("dragover");
+});
+
+dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("dragover");
+});
+
+dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+    const files = e.dataTransfer.files;
+    if (files.length > 0) uploadFile(files[0]);
+});
+
+fileInput.addEventListener("change", () => {
+    if (fileInput.files.length > 0) uploadFile(fileInput.files[0]);
+});
+
+// --- Upload ---
+async function uploadFile(file) {
+    const validExts = [".mp4", ".avi", ".mkv", ".mov", ".webm"];
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!validExts.includes(ext)) {
+        showUploadStatus("Unsupported file type: " + ext, true);
+        return;
+    }
+
+    dropZone.classList.add("uploading");
+    const progress = $("#upload-progress");
+    const progressBar = $("#upload-progress-bar");
+    progress.style.display = "block";
+    progressBar.style.width = "0%";
+    showUploadStatus("Uploading " + file.name + " (" + formatSize(file.size) + ")...", false);
+
+    const formData = new FormData();
+    formData.append("video", file);
+
+    try {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/upload");
+
+        xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable) {
+                const pct = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = pct + "%";
+            }
+        });
+
+        const result = await new Promise((resolve, reject) => {
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    resolve(JSON.parse(xhr.responseText));
+                } else {
+                    const data = JSON.parse(xhr.responseText);
+                    reject(new Error(data.error || "Upload failed"));
+                }
+            };
+            xhr.onerror = () => reject(new Error("Network error during upload"));
+            xhr.send(formData);
+        });
+
+        showUploadStatus(file.name + " (" + formatSize(file.size) + ") - uploaded", false, true);
+        selectedVideo = result.path;
+        selectedSource = "upload";
+        deselectServerVideos();
+        updateStartButton();
+        loadVideos();
+    } catch (err) {
+        showUploadStatus("Upload failed: " + err.message, true);
+    } finally {
+        dropZone.classList.remove("uploading");
+        setTimeout(() => { progress.style.display = "none"; }, 1000);
+    }
+}
+
+function showUploadStatus(msg, isError, isSuccess) {
+    const el = $("#upload-status");
+    el.textContent = msg;
+    el.className = "upload-status" + (isError ? " error" : "") + (isSuccess ? " success" : "");
+}
+
+// --- Server Video List ---
+async function loadVideos() {
+    const list = $("#video-list");
+    try {
+        const res = await fetch("/api/videos");
+        const videos = await res.json();
+
+        if (videos.length === 0) {
+            list.innerHTML = '<div class="video-list-empty">No videos found in server directory</div>';
+            return;
+        }
+
+        list.innerHTML = "";
+        videos.forEach(v => {
+            const item = document.createElement("div");
+            item.className = "video-item";
+            if (selectedSource === "server" && selectedVideo === v.path) {
+                item.classList.add("selected");
+            }
+            item.innerHTML =
+                '<span class="video-item-name">' + escHtml(v.name) + '</span>' +
+                '<span class="video-item-size">' + formatSize(v.size) + '</span>';
+            item.addEventListener("click", () => {
+                selectedVideo = v.path;
+                selectedSource = "server";
+                list.querySelectorAll(".video-item").forEach(el => el.classList.remove("selected"));
+                item.classList.add("selected");
+                showUploadStatus("", false);
+                updateStartButton();
+            });
+            list.appendChild(item);
+        });
+    } catch {
+        list.innerHTML = '<div class="video-list-empty">Failed to load video list</div>';
+    }
+}
+
+function deselectServerVideos() {
+    $("#video-list").querySelectorAll(".video-item").forEach(el => el.classList.remove("selected"));
+}
+
+// --- Start ---
+function updateStartButton() {
+    $("#start-btn").disabled = !selectedVideo;
+}
+
+$("#start-btn").addEventListener("click", async () => {
+    if (!selectedVideo) return;
+
+    const outputDir = $("#output-dir").value.trim() || "./output";
+    const btn = $("#start-btn");
+    btn.disabled = true;
+    btn.textContent = "Starting...";
+    $("#error-msg").textContent = "";
+
+    try {
+        const res = await fetch("/api/configure", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ video: selectedVideo, output: outputDir }),
+        });
+
+        if (res.ok) {
+            window.location.href = "/";
+        } else {
+            const data = await res.json();
+            $("#error-msg").textContent = data.error || "Configuration failed";
+            btn.disabled = false;
+            btn.innerHTML = 'Start Annotating <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>';
+        }
+    } catch {
+        $("#error-msg").textContent = "Network error. Is the server running?";
+        btn.disabled = false;
+        btn.innerHTML = 'Start Annotating <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>';
+    }
+});
+
+// --- Utilities ---
+function formatSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+}
+
+function escHtml(s) {
+    const d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+// --- Folder Browser ---
+let fbCurrentPath = "";
+
+function openFolderBrowser() {
+    $("#fb-overlay").classList.add("visible");
+    // Start from current output-dir value or cwd
+    const startPath = $("#output-dir").value.trim() || ".";
+    loadDir(startPath);
+}
+
+function closeFolderBrowser() {
+    $("#fb-overlay").classList.remove("visible");
+}
+
+async function loadDir(path) {
+    const list = $("#fb-list");
+    const pathEl = $("#fb-path");
+    list.innerHTML = '<div class="fb-empty">Loading...</div>';
+    pathEl.textContent = path;
+
+    try {
+        const res = await fetch("/api/browse?path=" + encodeURIComponent(path));
+        const data = await res.json();
+
+        if (!res.ok) {
+            list.innerHTML = '<div class="fb-empty">' + escHtml(data.error || "Error") + '</div>';
+            return;
+        }
+
+        fbCurrentPath = data.path;
+        pathEl.textContent = data.path;
+        list.innerHTML = "";
+
+        // Parent directory entry
+        const parent = data.path.substring(0, data.path.lastIndexOf("/")) || "/";
+        if (data.path !== "/") {
+            const parentItem = document.createElement("div");
+            parentItem.className = "fb-item";
+            parentItem.innerHTML =
+                '<span class="fb-item-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2L3 7l5 5"/></svg></span>' +
+                '<span class="fb-item-name fb-item-parent">..</span>';
+            parentItem.addEventListener("click", () => loadDir(parent));
+            list.appendChild(parentItem);
+        }
+
+        if (data.dirs.length === 0 && data.path === "/") {
+            list.innerHTML = '<div class="fb-empty">No subdirectories</div>';
+            return;
+        }
+
+        data.dirs.forEach(name => {
+            const item = document.createElement("div");
+            item.className = "fb-item";
+            item.innerHTML =
+                '<span class="fb-item-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 4V11a1 1 0 001 1h10a1 1 0 001-1V5.5a1 1 0 00-1-1H7L5.5 3H2A1 1 0 001 4z"/></svg></span>' +
+                '<span class="fb-item-name">' + escHtml(name) + '</span>';
+            item.addEventListener("click", () => loadDir(fbCurrentPath + "/" + name));
+            list.appendChild(item);
+        });
+    } catch {
+        list.innerHTML = '<div class="fb-empty">Failed to load directory</div>';
+    }
+}
+
+$("#browse-btn").addEventListener("click", openFolderBrowser);
+$("#fb-cancel").addEventListener("click", closeFolderBrowser);
+$("#fb-overlay").addEventListener("click", (e) => {
+    if (e.target === $("#fb-overlay")) closeFolderBrowser();
+});
+
+$("#fb-select").addEventListener("click", () => {
+    if (fbCurrentPath) {
+        $("#output-dir").value = fbCurrentPath;
+    }
+    closeFolderBrowser();
+});
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && $("#fb-overlay").classList.contains("visible")) {
+        closeFolderBrowser();
+    }
+});
+
+// --- Init ---
+loadVideos();
+</script>
+</body>
+</html>

@@ -1,0 +1,1850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sprite Cutout Creator</title>
+<style>
+/* ============================================================
+   1. RESET & BASE
+   ============================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bg-deep: #0d1117;
+    --bg-surface: #161b22;
+    --bg-elevated: #21262d;
+    --bg-overlay: #30363d;
+    --border: #30363d;
+    --border-subtle: #21262d;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-tertiary: #6e7681;
+    --accent: #58a6ff;
+    --accent-hover: #79c0ff;
+    --success: #3fb950;
+    --warning: #d29922;
+    --danger: #f85149;
+    --lasso-color: #39d353;
+    --lasso-glow: rgba(57, 211, 83, 0.3);
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --transition: 150ms ease;
+}
+
+body {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-overlay); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ============================================================
+   2. HEADER BAR
+   ============================================================ */
+.header {
+    height: 48px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-logo {
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-logo svg { width: 14px; height: 14px; }
+
+.header-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-stat {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.header-stat strong {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.header-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all var(--transition);
+}
+
+.header-btn:hover {
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+    border-color: var(--accent);
+}
+
+/* ============================================================
+   3. MAIN LAYOUT
+   ============================================================ */
+.main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ============================================================
+   4. SIDEBAR
+   ============================================================ */
+.sidebar {
+    width: 260px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.sidebar-section:last-child { border-bottom: none; }
+
+.section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+    margin-bottom: 12px;
+}
+
+/* -- Frame Navigation -- */
+.frame-nav-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.nav-btn {
+    flex: 0 0 40px;
+    height: 36px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+}
+
+.nav-btn:hover {
+    background: var(--bg-overlay);
+    border-color: var(--accent);
+}
+
+.nav-btn:active { transform: scale(0.95); }
+
+.frame-input {
+    flex: 1;
+    height: 36px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+    transition: border-color var(--transition);
+}
+
+.frame-input:focus { border-color: var(--accent); }
+
+.frame-time {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.skip-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.skip-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.skip-btns {
+    display: flex;
+    gap: 4px;
+}
+
+.skip-btn {
+    height: 24px;
+    min-width: 28px;
+    padding: 0 6px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.skip-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+.skip-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* -- Class Selector -- */
+.class-search-wrap {
+    position: relative;
+    margin-bottom: 8px;
+}
+
+.class-search-icon {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.class-search {
+    width: 100%;
+    height: 32px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 12px;
+    padding: 0 8px 0 28px;
+    outline: none;
+    transition: border-color var(--transition);
+}
+
+.class-search:focus { border-color: var(--accent); }
+
+.class-search::placeholder { color: var(--text-tertiary); }
+
+.class-list {
+    max-height: 300px;
+    min-height: 120px;
+    overflow-y: auto;
+    margin: 0 -4px;
+}
+
+.class-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition);
+    border-left: 3px solid transparent;
+}
+
+.class-item:hover { background: var(--bg-elevated); }
+
+.class-item.selected {
+    background: var(--bg-elevated);
+    border-left-color: var(--accent);
+}
+
+.class-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid var(--text-tertiary);
+    flex-shrink: 0;
+    transition: all var(--transition);
+}
+
+.class-item.selected .class-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.class-name {
+    flex: 1;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    transition: color var(--transition);
+}
+
+.class-item.selected .class-name { color: var(--text-primary); font-weight: 500; }
+
+.class-count {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+}
+
+.class-no-match {
+    padding: 12px 8px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    text-align: center;
+}
+
+/* -- Quick Help -- */
+.help-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+}
+
+.help-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+kbd {
+    display: inline-block;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-primary);
+    min-width: 20px;
+    text-align: center;
+    line-height: 16px;
+}
+
+/* -- Recent Saves -- */
+.undo-btn {
+    width: 100%;
+    height: 30px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-bottom: 10px;
+}
+
+.undo-btn:hover {
+    background: var(--bg-elevated);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.save-entry {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.save-entry:last-child { border-bottom: none; }
+
+.save-entry-class {
+    font-size: 12px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.save-entry-info {
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+.saves-empty {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    text-align: center;
+    padding: 8px 0;
+}
+
+/* ============================================================
+   5. CENTER (Canvas + Scrubber)
+   ============================================================ */
+.center-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-deep);
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+}
+
+.canvas-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 200ms;
+}
+
+.canvas-loading.visible { opacity: 1; }
+
+.canvas-loading-pulse {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* -- Frame Scrubber -- */
+.scrubber {
+    height: 56px;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 16px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.scrubber-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.scrubber-btn {
+    width: 24px;
+    height: 24px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    flex-shrink: 0;
+}
+
+.scrubber-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+
+.scrubber-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: var(--bg-overlay);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.scrubber-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform var(--transition);
+}
+
+.scrubber-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+.scrubber-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.scrubber-info {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    padding: 0 32px;
+}
+
+/* ============================================================
+   6. PREVIEW PANEL
+   ============================================================ */
+.preview-panel {
+    width: 200px;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.preview-header {
+    padding: 12px 12px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.preview-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    overflow-y: auto;
+}
+
+.preview-checkerboard {
+    width: 176px;
+    height: 176px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background-image:
+        linear-gradient(45deg, #1a1e24 25%, transparent 25%),
+        linear-gradient(-45deg, #1a1e24 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1a1e24 75%),
+        linear-gradient(-45deg, transparent 75%, #1a1e24 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.preview-checkerboard img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.preview-placeholder {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.preview-info {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.preview-info-row {
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding: 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.preview-info-row strong {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.preview-undo-btn {
+    width: 100%;
+    height: 28px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-top: 8px;
+}
+
+.preview-undo-btn:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: rgba(248, 81, 73, 0.1);
+}
+
+/* ============================================================
+   7. STATUS BAR
+   ============================================================ */
+.status-bar {
+    height: 28px;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.status-left { color: var(--text-secondary); }
+.status-right { color: var(--text-tertiary); }
+
+/* ============================================================
+   8. TOAST NOTIFICATIONS
+   ============================================================ */
+.toast-container {
+    position: fixed;
+    top: 56px;
+    right: 16px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transform: translateX(120%);
+    transition: transform 250ms ease;
+    pointer-events: auto;
+    max-width: 320px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toast.show { transform: translateX(0); }
+.toast.toast-success { border-left: 3px solid var(--success); }
+.toast.toast-error { border-left: 3px solid var(--danger); }
+.toast.toast-info { border-left: 3px solid var(--accent); }
+
+.toast-icon {
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.toast-success .toast-icon { color: var(--success); }
+.toast-error .toast-icon { color: var(--danger); }
+.toast-info .toast-icon { color: var(--accent); }
+
+/* ============================================================
+   9. HELP MODAL
+   ============================================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms;
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    width: 440px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.shortcut-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.shortcut-table tr { border-bottom: 1px solid var(--border-subtle); }
+.shortcut-table tr:last-child { border-bottom: none; }
+
+.shortcut-table td {
+    padding: 8px 4px;
+    font-size: 13px;
+}
+
+.shortcut-table td:first-child {
+    width: 120px;
+    padding-right: 16px;
+}
+
+.shortcut-table td:last-child { color: var(--text-secondary); }
+
+.modal-close-hint {
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-align: center;
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<div class="header">
+    <div class="header-left">
+        <div class="header-logo">
+            <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2">
+                <rect x="2" y="2" width="12" height="12" rx="2"/>
+                <path d="M5 8h6M8 5v6"/>
+            </svg>
+        </div>
+        <span class="header-title">Sprite Cutout Creator</span>
+    </div>
+    <div class="header-right">
+        <a href="#" id="btn-switch-video" style="font-size:12px;color:var(--text-secondary);text-decoration:none;transition:color 150ms ease;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'">Switch Video</a>
+        <span class="header-stat">Saves: <strong id="hdr-saves">0</strong></span>
+        <span class="header-stat" style="display:flex;align-items:center;gap:6px;">
+            Zoom:
+            <input type="range" id="zoom-slider" min="25" max="1000" value="100" style="width:100px;height:4px;accent-color:var(--accent);cursor:pointer;">
+            <strong id="hdr-zoom" style="min-width:38px;text-align:right;">100%</strong>
+        </span>
+        <button class="header-btn" id="btn-help" title="Keyboard shortcuts (?)">?</button>
+    </div>
+</div>
+
+<!-- ============================================================
+     MAIN LAYOUT
+     ============================================================ -->
+<div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+        <!-- Frame Navigation -->
+        <div class="sidebar-section">
+            <div class="section-title">Frame</div>
+            <div class="frame-nav-row">
+                <button class="nav-btn" id="btn-prev" title="Previous frame">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 1L3 6l5 5"/></svg>
+                </button>
+                <input type="number" class="frame-input" id="frame-input" value="0" min="0">
+                <button class="nav-btn" id="btn-next" title="Next frame">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 1l5 5-5 5"/></svg>
+                </button>
+            </div>
+            <div class="frame-time" id="frame-time">00:00.0</div>
+            <div class="skip-row">
+                <span class="skip-label">Skip:</span>
+                <div class="skip-btns" id="skip-btns">
+                    <button class="skip-btn active" data-skip="1">1</button>
+                    <button class="skip-btn" data-skip="5">5</button>
+                    <button class="skip-btn" data-skip="10">10</button>
+                    <button class="skip-btn" data-skip="30">30</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Class Selector -->
+        <div class="sidebar-section" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+            <div class="section-title">Class</div>
+            <div class="class-search-wrap">
+                <span class="class-search-icon">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="3.5"/><path d="M7.5 7.5L10.5 10.5"/></svg>
+                </span>
+                <input type="text" class="class-search" id="class-search" placeholder="Filter classes...">
+            </div>
+            <div class="class-list" id="class-list">
+                <!-- skeleton placeholders -->
+                <div class="class-item" style="opacity:0.3"><div class="class-dot"></div><div class="class-name" style="background:var(--bg-overlay);border-radius:3px;height:14px;width:80%;"></div></div>
+                <div class="class-item" style="opacity:0.2"><div class="class-dot"></div><div class="class-name" style="background:var(--bg-overlay);border-radius:3px;height:14px;width:60%;"></div></div>
+                <div class="class-item" style="opacity:0.15"><div class="class-dot"></div><div class="class-name" style="background:var(--bg-overlay);border-radius:3px;height:14px;width:70%;"></div></div>
+            </div>
+        </div>
+
+        <!-- Quick Help -->
+        <div class="sidebar-section">
+            <div class="section-title">Shortcuts</div>
+            <div class="help-card">
+                <div class="help-row"><kbd>S</kbd> Save cutout</div>
+                <div class="help-row"><kbd>Esc</kbd> Clear drawing</div>
+                <div class="help-row"><kbd>&larr;&rarr;</kbd> Navigate frames</div>
+                <div class="help-row"><kbd>1</kbd>-<kbd>8</kbd> Select class</div>
+                <div class="help-row"><kbd>Alt</kbd>+<kbd>Scroll</kbd> Zoom in/out</div>
+                <div class="help-row"><kbd>Space</kbd> Hold + drag to pan</div>
+                <div class="help-row"><kbd>Ctrl+Z</kbd> Undo last save</div>
+                <div class="help-row"><kbd>?</kbd> All shortcuts</div>
+            </div>
+        </div>
+
+        <!-- Recent Saves -->
+        <div class="sidebar-section">
+            <div class="section-title">Recent Saves</div>
+            <div id="sidebar-undo-wrap" style="display:none;">
+                <button class="undo-btn" id="sidebar-undo-btn">Undo last save</button>
+            </div>
+            <div id="recent-saves">
+                <div class="saves-empty">No saves yet</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CENTER: Canvas + Scrubber -->
+    <div class="center-col">
+        <div class="canvas-area" id="canvas-area">
+            <canvas id="canvas"></canvas>
+            <div class="canvas-loading" id="canvas-loading">
+                <div class="canvas-loading-pulse"></div>
+            </div>
+        </div>
+
+        <!-- Frame Scrubber -->
+        <div class="scrubber">
+            <div class="scrubber-row">
+                <button class="scrubber-btn" id="scrub-prev">
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1L2 4l4 3"/></svg>
+                </button>
+                <input type="range" class="scrubber-slider" id="scrub-slider" min="0" value="0">
+                <button class="scrubber-btn" id="scrub-next">
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 1l4 3-4 3"/></svg>
+                </button>
+            </div>
+            <div class="scrubber-info">
+                <span id="scrub-frame">Frame 0 / 0</span>
+                <span id="scrub-time">00:00.0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PREVIEW PANEL -->
+    <div class="preview-panel">
+        <div class="preview-header">Preview</div>
+        <div class="preview-content" id="preview-content">
+            <div class="preview-checkerboard" id="preview-box">
+                <span class="preview-placeholder" id="preview-placeholder">Draw a lasso to see preview</span>
+                <img id="preview-img" style="display:none;" alt="Preview">
+            </div>
+            <div class="preview-info" id="preview-info" style="display:none;">
+                <div class="preview-info-row" id="preview-filename"></div>
+                <div class="preview-info-row" id="preview-dims"></div>
+                <div class="preview-info-row" id="preview-class"></div>
+                <button class="preview-undo-btn" id="preview-undo-btn">Undo last save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+    <span class="status-left" id="status-left">Loading...</span>
+    <span class="status-right" id="status-right"></span>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- HELP MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+        <div class="modal-title">Keyboard Shortcuts</div>
+        <table class="shortcut-table">
+            <tr><td><kbd>S</kbd></td><td>Save cutout</td></tr>
+            <tr><td><kbd>Escape</kbd></td><td>Clear drawing / close modal</td></tr>
+            <tr><td><kbd>&larr;</kbd> / <kbd>&rarr;</kbd></td><td>Previous / next frame</td></tr>
+            <tr><td><kbd>1</kbd> - <kbd>8</kbd></td><td>Select class by number</td></tr>
+            <tr><td><kbd>Alt</kbd> + <kbd>Scroll</kbd></td><td>Zoom in / out</td></tr>
+            <tr><td><kbd>Space</kbd> + drag</td><td>Pan view</td></tr>
+            <tr><td><kbd>Ctrl+Z</kbd></td><td>Undo last save</td></tr>
+            <tr><td><kbd>R</kbd></td><td>Reset zoom and pan</td></tr>
+            <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+        </table>
+        <div class="modal-close-hint">Press <kbd>Escape</kbd> or click outside to close</div>
+    </div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+const state = {
+    video: null,
+    frame: 0,
+    skip: 1,
+    selectedClass: "",
+    classes: [],
+    frameImage: null,
+    frameLoading: false,
+    // Lasso
+    lassoPoints: [],
+    isDrawing: false,
+    // Zoom/Pan
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+    isPanning: false,
+    panStartX: 0,
+    panStartY: 0,
+    spaceDown: false,
+    // Saves
+    recentSaves: [],
+    savesCount: 0,
+    // Preview
+    previewUrl: null,
+    lastSave: null,
+    // Modal
+    helpOpen: false,
+};
+
+const canvas = $("#canvas");
+const ctx = canvas.getContext("2d");
+const canvasArea = $("#canvas-area");
+
+let renderPending = false;
+let scrubDebounce = null;
+let preloadedFrame = null;
+let preloadedFrameNum = -1;
+let frameLoadSeq = 0;
+let _frameInFlight = false;
+let _pendingFrame = null;
+
+/* ============================================================
+   INIT
+   ============================================================ */
+async function init() {
+    try {
+        const [videoRes, sessionRes] = await Promise.all([
+            fetch("/api/video/info"),
+            fetch("/api/session"),
+        ]);
+        state.video = await videoRes.json();
+        const session = await sessionRes.json();
+
+        state.savesCount = session.saves_count || 0;
+        if (session.last_class) state.selectedClass = session.last_class;
+        updateSavesCounter();
+
+        $("#frame-input").max = state.video.total_frames - 1;
+        $("#scrub-slider").max = state.video.total_frames - 1;
+
+        await loadClasses();
+        resizeCanvas();
+        loadFrame(0);
+
+        setStatus("Ready");
+        updateStatusRight();
+    } catch (err) {
+        setStatus("Failed to connect to server");
+        showToast("Could not connect to server", "error");
+    }
+}
+
+/* ============================================================
+   CLASSES
+   ============================================================ */
+async function loadClasses() {
+    try {
+        const res = await fetch("/api/classes");
+        state.classes = await res.json();
+    } catch {
+        state.classes = [];
+    }
+    renderClassList();
+}
+
+function renderClassList(filter) {
+    const container = $("#class-list");
+    const term = (filter || "").toLowerCase();
+    const filtered = term
+        ? state.classes.filter(c => c.name.toLowerCase().includes(term))
+        : state.classes;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="class-no-match">' +
+            (term ? "No matches" : "No classes found") + '</div>';
+        return;
+    }
+
+    /* Pick default class if none selected */
+    if (!state.selectedClass && filtered.length > 0) {
+        state.selectedClass = filtered[0].name;
+    }
+
+    container.innerHTML = "";
+    filtered.forEach((cls, idx) => {
+        const div = document.createElement("div");
+        div.className = "class-item" + (cls.name === state.selectedClass ? " selected" : "");
+        const shortcut = idx < 8 ? '<kbd style="margin-right:4px;font-size:10px;min-width:16px;">' + (idx + 1) + '</kbd>' : '';
+        div.innerHTML =
+            '<div class="class-dot"></div>' +
+            shortcut +
+            '<span class="class-name">' + escHtml(cls.name) + '</span>' +
+            '<span class="class-count">' +
+                (cls.custom > 0 ? cls.custom + "/" + cls.total : String(cls.total)) +
+            '</span>';
+        div.addEventListener("click", () => {
+            selectClass(cls.name);
+        });
+        container.appendChild(div);
+    });
+}
+
+function selectClass(name) {
+    state.selectedClass = name;
+    const container = $("#class-list");
+    container.querySelectorAll(".class-item").forEach(el => el.classList.remove("selected"));
+    container.querySelectorAll(".class-item").forEach(el => {
+        const nameEl = el.querySelector(".class-name");
+        if (nameEl && nameEl.textContent === name) el.classList.add("selected");
+    });
+}
+
+function selectClassByIndex(idx) {
+    /* idx is 0-based; select from the currently visible (filtered) list */
+    const items = $("#class-list").querySelectorAll(".class-item");
+    if (idx >= items.length) return;
+    const nameEl = items[idx].querySelector(".class-name");
+    if (nameEl) {
+        selectClass(nameEl.textContent);
+        showToast("Class: " + nameEl.textContent, "info");
+    }
+}
+
+$("#class-search").addEventListener("input", (e) => {
+    renderClassList(e.target.value);
+});
+
+/* ============================================================
+   FRAME LOADING
+   ============================================================ */
+function loadFrame(n) {
+    if (!state.video) return;
+    n = Math.max(0, Math.min(n, state.video.total_frames - 1));
+    state.frame = n;
+
+    /* Update all frame displays */
+    $("#frame-input").value = n;
+    $("#scrub-slider").value = n;
+    updateFrameInfo();
+
+    /* Clear lasso on frame change */
+    state.lassoPoints = [];
+    clearPreview();
+
+    /* Check if preloaded */
+    if (preloadedFrameNum === n && preloadedFrame) {
+        state.frameImage = preloadedFrame;
+        preloadedFrame = null;
+        preloadedFrameNum = -1;
+        _frameInFlight = false;
+        _pendingFrame = null;
+        render();
+        preloadNext(n);
+        return;
+    }
+
+    /* Throttle: only one HTTP request in flight at a time.
+       If already loading, just queue the latest requested frame. */
+    if (_frameInFlight) {
+        _pendingFrame = n;
+        return;
+    }
+
+    _fetchFrame(n);
+}
+
+function _fetchFrame(n) {
+    _frameInFlight = true;
+    _pendingFrame = null;
+    showFrameLoading(true);
+    const seq = ++frameLoadSeq;
+    const img = new Image();
+    img.onload = () => {
+        if (seq !== frameLoadSeq) return;
+        state.frameImage = img;
+        showFrameLoading(false);
+        render();
+        _frameInFlight = false;
+        /* If more frames were requested while loading, load the latest */
+        if (_pendingFrame !== null) {
+            const next = _pendingFrame;
+            _pendingFrame = null;
+            if (preloadedFrameNum === next && preloadedFrame) {
+                state.frameImage = preloadedFrame;
+                preloadedFrame = null;
+                preloadedFrameNum = -1;
+                render();
+                preloadNext(next);
+            } else {
+                _fetchFrame(next);
+            }
+        } else {
+            preloadNext(state.frame);
+        }
+    };
+    img.onerror = () => {
+        if (seq !== frameLoadSeq) return;
+        showFrameLoading(false);
+        _frameInFlight = false;
+        showToast("Failed to load frame " + n, "error");
+        /* Still try the pending frame if any */
+        if (_pendingFrame !== null) {
+            const next = _pendingFrame;
+            _pendingFrame = null;
+            _fetchFrame(next);
+        }
+    };
+    img.src = "/api/frame/" + n + "?t=" + seq;
+}
+
+function preloadNext(current) {
+    const next = current + state.skip;
+    if (!state.video || next >= state.video.total_frames || next < 0) return;
+    const img = new Image();
+    img.onload = () => { preloadedFrame = img; preloadedFrameNum = next; };
+    img.src = "/api/frame/" + next;
+}
+
+function showFrameLoading(show) {
+    state.frameLoading = show;
+    $("#canvas-loading").classList.toggle("visible", show);
+}
+
+function updateFrameInfo() {
+    if (!state.video) return;
+    const t = frameToTime(state.frame);
+    $("#frame-time").textContent = t;
+    $("#scrub-frame").textContent = "Frame " + state.frame + " / " + (state.video.total_frames - 1);
+    $("#scrub-time").textContent = t;
+}
+
+function frameToTime(n) {
+    if (!state.video || !state.video.fps) return "00:00.0";
+    const secs = n / state.video.fps;
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return String(m).padStart(2, "0") + ":" + s.toFixed(1).padStart(4, "0");
+}
+
+/* ============================================================
+   CANVAS RESIZE
+   ============================================================ */
+function resizeCanvas() {
+    canvas.width = canvasArea.clientWidth;
+    canvas.height = canvasArea.clientHeight;
+    if (state.frameImage) render();
+}
+window.addEventListener("resize", resizeCanvas);
+
+/* ============================================================
+   COORDINATE TRANSFORMS
+   ============================================================ */
+function getTransform() {
+    if (!state.frameImage || !state.video) return { scale: 1, ox: 0, oy: 0 };
+    const baseScale = Math.min(canvas.width / state.video.width, canvas.height / state.video.height);
+    const s = baseScale * state.zoom;
+    return {
+        scale: s,
+        ox: (canvas.width - state.video.width * s) / 2 + state.panX,
+        oy: (canvas.height - state.video.height * s) / 2 + state.panY,
+    };
+}
+
+function canvasToFrame(cx, cy) {
+    const t = getTransform();
+    return [Math.round((cx - t.ox) / t.scale), Math.round((cy - t.oy) / t.scale)];
+}
+
+function frameToCanvas(fx, fy) {
+    const t = getTransform();
+    return [fx * t.scale + t.ox, fy * t.scale + t.oy];
+}
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+function scheduleRender() {
+    if (!renderPending) {
+        renderPending = true;
+        requestAnimationFrame(() => { renderPending = false; render(); });
+    }
+}
+
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!state.frameImage) return;
+
+    const t = getTransform();
+    ctx.drawImage(state.frameImage, t.ox, t.oy, state.video.width * t.scale, state.video.height * t.scale);
+
+    if (state.lassoPoints.length < 2) return;
+
+    const pts = state.lassoPoints;
+    const [sx, sy] = frameToCanvas(pts[0][0], pts[0][1]);
+
+    /* Fill (after drawing is done) */
+    if (pts.length >= 3 && !state.isDrawing) {
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        for (let i = 1; i < pts.length; i++) {
+            const [px, py] = frameToCanvas(pts[i][0], pts[i][1]);
+            ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = "rgba(57, 211, 83, 0.12)";
+        ctx.fill();
+    }
+
+    /* Lasso stroke with glow */
+    ctx.save();
+    ctx.shadowColor = "rgba(57, 211, 83, 0.5)";
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    for (let i = 1; i < pts.length; i++) {
+        const [px, py] = frameToCanvas(pts[i][0], pts[i][1]);
+        ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = "#39d353";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
+    /* Dashed closing line */
+    if (pts.length >= 3) {
+        const last = pts[pts.length - 1];
+        const [lx, ly] = frameToCanvas(last[0], last[1]);
+        ctx.beginPath();
+        ctx.moveTo(lx, ly);
+        ctx.lineTo(sx, sy);
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = "#39d353";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    /* Vertex dots (every 8th point) */
+    ctx.fillStyle = "#39d353";
+    for (let i = 0; i < pts.length; i += 8) {
+        const [vx, vy] = frameToCanvas(pts[i][0], pts[i][1]);
+        ctx.beginPath();
+        ctx.arc(vx, vy, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+/* ============================================================
+   MOUSE EVENTS (Drawing + Pan)
+   ============================================================ */
+canvas.addEventListener("mousedown", (e) => {
+    if (e.button === 2) {
+        state.lassoPoints = [];
+        clearPreview();
+        render();
+        return;
+    }
+    if (e.button !== 0) return;
+
+    if (state.spaceDown) {
+        state.isPanning = true;
+        state.panStartX = e.clientX - state.panX;
+        state.panStartY = e.clientY - state.panY;
+        canvas.style.cursor = "grabbing";
+        return;
+    }
+
+    state.isDrawing = true;
+    const rect = canvas.getBoundingClientRect();
+    const [fx, fy] = canvasToFrame(e.clientX - rect.left, e.clientY - rect.top);
+    state.lassoPoints = [[fx, fy]];
+    clearPreview();
+    render();
+});
+
+canvas.addEventListener("mousemove", (e) => {
+    if (state.isPanning) {
+        state.panX = e.clientX - state.panStartX;
+        state.panY = e.clientY - state.panStartY;
+        scheduleRender();
+        return;
+    }
+    if (!state.isDrawing) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const [fx, fy] = canvasToFrame(e.clientX - rect.left, e.clientY - rect.top);
+
+    /* Minimum distance check to keep point count manageable */
+    if (state.lassoPoints.length > 0) {
+        const last = state.lassoPoints[state.lassoPoints.length - 1];
+        const dx = fx - last[0], dy = fy - last[1];
+        if (dx * dx + dy * dy < 9) return;
+    }
+
+    state.lassoPoints.push([fx, fy]);
+    scheduleRender();
+});
+
+canvas.addEventListener("mouseup", (e) => {
+    if (state.isPanning) {
+        state.isPanning = false;
+        canvas.style.cursor = state.spaceDown ? "grab" : "crosshair";
+        return;
+    }
+    if (state.isDrawing) {
+        state.isDrawing = false;
+        render();
+        /* Fetch live preview */
+        if (state.lassoPoints.length >= 3) {
+            fetchPreview();
+        }
+    }
+});
+
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+/* ============================================================
+   SCROLL ZOOM
+   ============================================================ */
+canvas.addEventListener("wheel", (e) => {
+    if (!e.altKey) return;
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    const oldZoom = state.zoom;
+    state.zoom = Math.max(0.25, Math.min(10, state.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+
+    const ratio = state.zoom / oldZoom;
+    state.panX = mx - ratio * (mx - state.panX);
+    state.panY = my - ratio * (my - state.panY);
+
+    updateZoomDisplay();
+    render();
+}, { passive: false });
+
+function updateZoomDisplay() {
+    const pct = Math.round(state.zoom * 100);
+    $("#hdr-zoom").textContent = pct + "%";
+    $("#zoom-slider").value = pct;
+}
+
+$("#zoom-slider").addEventListener("input", (e) => {
+    state.zoom = parseInt(e.target.value) / 100;
+    $("#hdr-zoom").textContent = Math.round(state.zoom * 100) + "%";
+    render();
+});
+
+/* ============================================================
+   KEYBOARD
+   ============================================================ */
+document.addEventListener("keydown", (e) => {
+    /* Ignore when typing in inputs */
+    if (e.target.tagName === "INPUT" && e.target.type !== "range") return;
+
+    if (e.code === "Space") {
+        e.preventDefault();
+        state.spaceDown = true;
+        if (!state.isDrawing) canvas.style.cursor = "grab";
+        return;
+    }
+
+    /* Ctrl+Z for undo */
+    if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        e.preventDefault();
+        undoSave();
+        return;
+    }
+
+    switch (e.key) {
+        case "s": case "S":
+            e.preventDefault();
+            saveCutout();
+            break;
+        case "ArrowLeft":
+            e.preventDefault();
+            loadFrame(state.frame - state.skip);
+            break;
+        case "ArrowRight":
+            e.preventDefault();
+            loadFrame(state.frame + state.skip);
+            break;
+        case "Escape":
+            if (state.helpOpen) {
+                closeHelp();
+            } else {
+                state.lassoPoints = [];
+                clearPreview();
+                render();
+            }
+            break;
+        case "r": case "R":
+            resetView();
+            break;
+        case "?":
+            openHelp();
+            break;
+        default:
+            if (e.key >= "1" && e.key <= "8") {
+                e.preventDefault();
+                selectClassByIndex(parseInt(e.key) - 1);
+            }
+    }
+});
+
+document.addEventListener("keyup", (e) => {
+    if (e.code === "Space") {
+        state.spaceDown = false;
+        canvas.style.cursor = "crosshair";
+    }
+});
+
+function resetView() {
+    state.zoom = 1;
+    state.panX = 0;
+    state.panY = 0;
+    updateZoomDisplay();
+    render();
+    showToast("View reset", "info");
+}
+
+/* ============================================================
+   SKIP CONTROLS
+   ============================================================ */
+function setSkip(n) {
+    state.skip = n;
+    $$(".skip-btn").forEach(btn => {
+        btn.classList.toggle("active", parseInt(btn.dataset.skip) === n);
+    });
+    updateStatusRight();
+}
+
+$$(".skip-btn").forEach(btn => {
+    btn.addEventListener("click", () => setSkip(parseInt(btn.dataset.skip)));
+});
+
+/* ============================================================
+   FRAME NAVIGATION
+   ============================================================ */
+$("#btn-prev").addEventListener("click", () => loadFrame(state.frame - state.skip));
+$("#btn-next").addEventListener("click", () => loadFrame(state.frame + state.skip));
+$("#scrub-prev").addEventListener("click", () => loadFrame(state.frame - state.skip));
+$("#scrub-next").addEventListener("click", () => loadFrame(state.frame + state.skip));
+
+$("#frame-input").addEventListener("change", (e) => {
+    loadFrame(parseInt(e.target.value) || 0);
+});
+
+/* Scrubber with debounce */
+$("#scrub-slider").addEventListener("input", (e) => {
+    const n = parseInt(e.target.value);
+    /* Update displays immediately for responsiveness */
+    state.frame = n;
+    updateFrameInfo();
+
+    /* Debounce actual frame load */
+    clearTimeout(scrubDebounce);
+    scrubDebounce = setTimeout(() => loadFrame(n), 50);
+});
+
+/* ============================================================
+   SAVE / EXPORT
+   ============================================================ */
+async function saveCutout() {
+    if (state.lassoPoints.length < 3) {
+        showToast("Draw a lasso first (at least 3 points)", "error");
+        return;
+    }
+    if (!state.selectedClass) {
+        showToast("Select a class first", "error");
+        return;
+    }
+
+    setStatus("Saving...");
+    try {
+        const res = await fetch("/api/export", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                frame: state.frame,
+                class_name: state.selectedClass,
+                points: state.lassoPoints,
+            }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            const entry = {
+                filename: data.filename,
+                width: data.size[0],
+                height: data.size[1],
+                className: state.selectedClass,
+                frame: state.frame,
+                time: new Date(),
+            };
+            state.recentSaves.unshift(entry);
+            if (state.recentSaves.length > 8) state.recentSaves.pop();
+            state.savesCount++;
+            state.lastSave = entry;
+
+            updateSavesCounter();
+            renderRecentSaves();
+            updatePreviewWithSave(entry);
+
+            state.lassoPoints = [];
+            /* Don't revoke preview URL - it's shown in the preview panel */
+            render();
+            setStatus("Ready");
+            showToast("Saved: " + data.filename + " (" + data.size[0] + "x" + data.size[1] + ")", "success");
+            loadClasses();
+        } else {
+            setStatus("Ready");
+            showToast("Save failed: " + (data.error || "Unknown error"), "error");
+        }
+    } catch (err) {
+        setStatus("Ready");
+        showToast("Network error while saving", "error");
+    }
+}
+
+/* ============================================================
+   UNDO
+   ============================================================ */
+async function undoSave() {
+    try {
+        const res = await fetch("/api/undo", { method: "POST" });
+        const data = await res.json();
+        if (res.ok && data.deleted) {
+            state.savesCount = Math.max(0, state.savesCount - 1);
+            if (state.recentSaves.length > 0) state.recentSaves.shift();
+            state.lastSave = state.recentSaves[0] || null;
+            updateSavesCounter();
+            renderRecentSaves();
+            updatePreviewAfterUndo();
+            showToast("Undone: " + data.deleted, "info");
+            loadClasses();
+        } else {
+            showToast(data.error || "Nothing to undo", "error");
+        }
+    } catch {
+        showToast("Undo failed", "error");
+    }
+}
+
+$("#sidebar-undo-btn").addEventListener("click", undoSave);
+$("#preview-undo-btn").addEventListener("click", undoSave);
+
+/* ============================================================
+   PREVIEW
+   ============================================================ */
+async function fetchPreview() {
+    if (state.lassoPoints.length < 3) return;
+    try {
+        const res = await fetch("/api/preview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                frame: state.frame,
+                points: state.lassoPoints,
+            }),
+        });
+        if (res.ok) {
+            const blob = await res.blob();
+            if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
+            state.previewUrl = URL.createObjectURL(blob);
+            showPreviewImage(state.previewUrl);
+            $("#preview-info").style.display = "none";
+        }
+    } catch { /* silent fail for preview */ }
+}
+
+function showPreviewImage(src) {
+    const img = $("#preview-img");
+    const ph = $("#preview-placeholder");
+    img.src = src;
+    img.style.display = "block";
+    ph.style.display = "none";
+}
+
+function clearPreview() {
+    const img = $("#preview-img");
+    const ph = $("#preview-placeholder");
+    if (!state.lastSave) {
+        img.style.display = "none";
+        ph.style.display = "";
+        ph.textContent = "Draw a lasso to see preview";
+        $("#preview-info").style.display = "none";
+    } else {
+        updatePreviewWithSave(state.lastSave);
+    }
+    if (state.previewUrl) {
+        URL.revokeObjectURL(state.previewUrl);
+        state.previewUrl = null;
+    }
+}
+
+function updatePreviewWithSave(entry) {
+    /* Keep the pre-save preview blob if available, otherwise fetch cutout */
+    if (state.previewUrl) {
+        showPreviewImage(state.previewUrl);
+    }
+    /* Update info */
+    const info = $("#preview-info");
+    info.style.display = "";
+    $("#preview-filename").innerHTML = "<strong>" + escHtml(entry.filename) + "</strong>";
+    $("#preview-dims").textContent = entry.width + " x " + entry.height + " px";
+    $("#preview-class").textContent = "Class: " + entry.className + " (frame " + entry.frame + ")";
+}
+
+function updatePreviewAfterUndo() {
+    if (state.lastSave) {
+        updatePreviewWithSave(state.lastSave);
+    } else {
+        const img = $("#preview-img");
+        const ph = $("#preview-placeholder");
+        img.style.display = "none";
+        ph.style.display = "";
+        ph.textContent = "Draw a lasso to see preview";
+        $("#preview-info").style.display = "none";
+    }
+}
+
+/* ============================================================
+   RECENT SAVES (sidebar)
+   ============================================================ */
+function renderRecentSaves() {
+    const wrap = $("#sidebar-undo-wrap");
+    const container = $("#recent-saves");
+
+    wrap.style.display = state.recentSaves.length > 0 ? "" : "none";
+
+    if (state.recentSaves.length === 0) {
+        container.innerHTML = '<div class="saves-empty">No saves yet</div>';
+        return;
+    }
+
+    container.innerHTML = state.recentSaves.map(s => {
+        const ago = timeSince(s.time);
+        return '<div class="save-entry">' +
+            '<span class="save-entry-class">' + escHtml(s.className) + '</span>' +
+            '<span class="save-entry-info">' + s.width + 'x' + s.height +
+            ' -- f.' + (s.frame || 0) + ' -- ' + ago + '</span>' +
+            '</div>';
+    }).join("");
+}
+
+function updateSavesCounter() {
+    $("#hdr-saves").textContent = state.savesCount;
+}
+
+/* ============================================================
+   TOAST NOTIFICATIONS
+   ============================================================ */
+function dismissToast(toast) {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+}
+
+function showToast(message, type) {
+    type = type || "info";
+    const container = $("#toast-container");
+    const toast = document.createElement("div");
+    toast.className = "toast toast-" + type;
+
+    const icons = { success: "+", error: "!", info: "i" };
+    toast.innerHTML = '<span class="toast-icon">' + icons[type] + '</span>' +
+        '<span>' + escHtml(message) + '</span>';
+
+    container.appendChild(toast);
+    /* Trigger animation */
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => toast.classList.add("show"));
+    });
+
+    /* Auto-dismiss with hover-to-pause */
+    let dismissTimer = setTimeout(() => dismissToast(toast), 4000);
+    toast.addEventListener("mouseenter", () => clearTimeout(dismissTimer));
+    toast.addEventListener("mouseleave", () => {
+        dismissTimer = setTimeout(() => dismissToast(toast), 2000);
+    });
+}
+
+/* ============================================================
+   HELP MODAL
+   ============================================================ */
+function openHelp() {
+    state.helpOpen = true;
+    $("#modal-overlay").classList.add("visible");
+}
+
+function closeHelp() {
+    state.helpOpen = false;
+    $("#modal-overlay").classList.remove("visible");
+}
+
+$("#btn-help").addEventListener("click", openHelp);
+
+$("#btn-switch-video").addEventListener("click", async (e) => {
+    e.preventDefault();
+    try {
+        await fetch("/api/reset", { method: "POST" });
+    } catch { /* proceed anyway */ }
+    window.location.href = "/";
+});
+$("#modal-overlay").addEventListener("click", (e) => {
+    if (e.target === $("#modal-overlay")) closeHelp();
+});
+
+/* ============================================================
+   STATUS BAR
+   ============================================================ */
+function setStatus(msg) {
+    $("#status-left").textContent = msg;
+}
+
+function updateStatusRight() {
+    if (!state.video) return;
+    $("#status-right").textContent =
+        state.video.width + "x" + state.video.height +
+        "  |  Skip: " + state.skip;
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function escHtml(s) {
+    const d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function timeSince(date) {
+    const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (secs < 5) return "just now";
+    if (secs < 60) return secs + "s ago";
+    const mins = Math.floor(secs / 60);
+    if (mins < 60) return mins + "m ago";
+    return Math.floor(mins / 60) + "h ago";
+}
+
+/* ============================================================
+   START
+   ============================================================ */
+init();
+</script>
+</body>
+</html>
