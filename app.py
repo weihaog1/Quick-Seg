@@ -136,13 +136,9 @@ def _apply_mask(frame, pts):
 def _apply_composite_mask(frame, regions):
     """Build RGBA cutout from multiple add/subtract regions."""
     mask = np.zeros(frame.shape[:2], dtype=np.uint8)
-    # Apply add regions first, then subtract
+    # Apply regions in order so later adds can override earlier subtracts
     for r in regions:
-        if not r["subtract"]:
-            cv2.fillPoly(mask, [r["pts"]], 255)
-    for r in regions:
-        if r["subtract"]:
-            cv2.fillPoly(mask, [r["pts"]], 0)
+        cv2.fillPoly(mask, [r["pts"]], 0 if r["subtract"] else 255)
     coords = np.where(mask > 0)
     if len(coords[0]) == 0:
         return None, None

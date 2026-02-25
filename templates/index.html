@@ -1430,18 +1430,11 @@ function render() {
         /* Build composite mask on offscreen canvas */
         _offCtx.clearRect(0, 0, _offscreen.width, _offscreen.height);
 
-        /* Paint add regions */
-        _offCtx.globalCompositeOperation = "source-over";
+        /* Paint regions in order: add paints, subtract erases */
         allRegions.forEach(r => {
-            if (!r.subtract && r.points.length >= 3)
-                fillPolyOnCtx(_offCtx, r.points);
-        });
-
-        /* Paint subtract regions (erase) */
-        _offCtx.globalCompositeOperation = "destination-out";
-        allRegions.forEach(r => {
-            if (r.subtract && r.points.length >= 3)
-                fillPolyOnCtx(_offCtx, r.points);
+            if (r.points.length < 3) return;
+            _offCtx.globalCompositeOperation = r.subtract ? "destination-out" : "source-over";
+            fillPolyOnCtx(_offCtx, r.points);
         });
         _offCtx.globalCompositeOperation = "source-over";
 
