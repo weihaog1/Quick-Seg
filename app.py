@@ -34,7 +34,8 @@ def _require_config():
 
 def _reset_state():
     """Release video capture and clear all caches."""
-    global _cap
+    global _cap, _dirs_seeded
+    _dirs_seeded = False
     if _cap is not None and _cap.isOpened():
         _cap.release()
     _cap = None
@@ -73,6 +74,19 @@ def _check_points(points):
         if not isinstance(p, list) or len(p) != 2:
             return None, _err("Each point must be [x, y]")
     return np.array(points, dtype=np.int32), None
+
+
+_dirs_seeded = False
+
+def _seed_class_dirs():
+    """Create all 8 deck class folders in the output directory."""
+    global _dirs_seeded
+    if _dirs_seeded:
+        return
+    out = Path(OUTPUT_DIR)
+    for name in DECK_CLASSES:
+        (out / name).mkdir(parents=True, exist_ok=True)
+    _dirs_seeded = True
 
 
 def _class_counts():
@@ -324,6 +338,7 @@ def export_cutout():
     if err: return err
     rgba, size = _apply_mask(frame, pts)
     if rgba is None: return _err("Polygon has zero area")
+    _seed_class_dirs()
     class_dir = Path(OUTPUT_DIR) / class_name
     class_dir.mkdir(parents=True, exist_ok=True)
     cid = _next_id(class_dir, class_name)
