@@ -131,6 +131,35 @@ body {
     border-color: var(--accent);
 }
 
+.mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.mode-btn:hover {
+    border-color: var(--text-tertiary);
+    color: var(--text-primary);
+}
+
+.mode-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.mode-indicator.mode-add { background: var(--success); }
+.mode-indicator.mode-subtract { background: var(--danger); }
+
 /* ============================================================
    3. MAIN LAYOUT
    ============================================================ */
@@ -882,6 +911,10 @@ canvas {
     <div class="header-right">
         <a href="#" id="btn-switch-video" style="font-size:12px;color:var(--text-secondary);text-decoration:none;transition:color 150ms ease;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'">Switch Video</a>
         <span class="header-stat">Saves: <strong id="hdr-saves">0</strong></span>
+        <button class="mode-btn" id="mode-btn" title="Toggle add/subtract mode (X)">
+            <span class="mode-indicator mode-add" id="mode-indicator"></span>
+            <span id="mode-label">Add</span>
+        </button>
         <span class="header-stat" style="display:flex;align-items:center;gap:6px;">
             Zoom:
             <input type="range" id="zoom-slider" min="25" max="1000" value="100" style="width:100px;height:4px;accent-color:var(--accent);cursor:pointer;">
@@ -950,7 +983,8 @@ canvas {
             </div>
             <div class="help-card" id="shortcuts-card" style="display:none;">
                 <div class="help-row"><kbd>S</kbd> Save cutout</div>
-                <div class="help-row"><kbd>Esc</kbd> Clear drawing</div>
+                <div class="help-row"><kbd>X</kbd> Toggle add/subtract</div>
+                <div class="help-row"><kbd>Esc</kbd> Clear all selections</div>
                 <div class="help-row"><kbd>&larr;&rarr;</kbd> Navigate frames</div>
                 <div class="help-row"><kbd>1</kbd>-<kbd>8</kbd> Select class</div>
                 <div class="help-row"><kbd>Alt</kbd>+<kbd>Scroll</kbd> Zoom in/out</div>
@@ -1032,7 +1066,8 @@ canvas {
         <div class="modal-title">Keyboard Shortcuts</div>
         <table class="shortcut-table">
             <tr><td><kbd>S</kbd></td><td>Save cutout</td></tr>
-            <tr><td><kbd>Escape</kbd></td><td>Clear drawing / close modal</td></tr>
+            <tr><td><kbd>X</kbd></td><td>Toggle add / subtract mode</td></tr>
+            <tr><td><kbd>Escape</kbd></td><td>Clear all selections / close modal</td></tr>
             <tr><td><kbd>&larr;</kbd> / <kbd>&rarr;</kbd></td><td>Previous / next frame</td></tr>
             <tr><td><kbd>1</kbd> - <kbd>8</kbd></td><td>Select class by number</td></tr>
             <tr><td><kbd>Alt</kbd> + <kbd>Scroll</kbd></td><td>Zoom in / out</td></tr>
@@ -1063,9 +1098,11 @@ const state = {
     classes: [],
     frameImage: null,
     frameLoading: false,
-    // Lasso
-    lassoPoints: [],
+    // Lasso / Regions
+    regions: [],        // [{points: [[x,y],...], subtract: bool}, ...]
+    currentLasso: [],   // points being drawn right now
     isDrawing: false,
+    subtractMode: false,
     // Zoom/Pan
     zoom: 1,
     panX: 0,
@@ -1217,9 +1254,8 @@ function loadFrame(n) {
     $("#scrub-slider").value = n;
     updateFrameInfo();
 
-    /* Clear lasso on frame change */
-    state.lassoPoints = [];
-    clearPreview();
+    /* Clear all regions on frame change */
+    clearAllRegions();
 
     /* Check if preloaded */
     if (preloadedFrameNum === n && preloadedFrame) {
@@ -1367,13 +1403,24 @@ function render() {
     const t = getTransform();
     ctx.drawImage(state.frameImage, t.ox, t.oy, state.video.width * t.scale, state.video.height * t.scale);
 
-    if (state.lassoPoints.length < 2) return;
+    /* Draw all completed regions */
+    state.regions.forEach(r => drawRegion(r.points, r.subtract, false));
 
-    const pts = state.lassoPoints;
+    /* Draw current lasso being drawn */
+    if (state.currentLasso.length >= 2) {
+        drawRegion(state.currentLasso, state.subtractMode, state.isDrawing);
+    }
+}
+
+function drawRegion(pts, isSubtract, isActive) {
+    if (pts.length < 2) return;
+    const color = isSubtract ? "#f85149" : "#39d353";
+    const fillColor = isSubtract ? "rgba(248, 81, 73, 0.12)" : "rgba(57, 211, 83, 0.12)";
+    const glowColor = isSubtract ? "rgba(248, 81, 73, 0.5)" : "rgba(57, 211, 83, 0.5)";
     const [sx, sy] = frameToCanvas(pts[0][0], pts[0][1]);
 
-    /* Fill (after drawing is done) */
-    if (pts.length >= 3 && !state.isDrawing) {
+    /* Fill (completed regions only) */
+    if (pts.length >= 3 && !isActive) {
         ctx.beginPath();
         ctx.moveTo(sx, sy);
         for (let i = 1; i < pts.length; i++) {
@@ -1381,13 +1428,13 @@ function render() {
             ctx.lineTo(px, py);
         }
         ctx.closePath();
-        ctx.fillStyle = "rgba(57, 211, 83, 0.12)";
+        ctx.fillStyle = fillColor;
         ctx.fill();
     }
 
-    /* Lasso stroke with glow */
+    /* Stroke with glow */
     ctx.save();
-    ctx.shadowColor = "rgba(57, 211, 83, 0.5)";
+    ctx.shadowColor = glowColor;
     ctx.shadowBlur = 6;
     ctx.beginPath();
     ctx.moveTo(sx, sy);
@@ -1395,7 +1442,7 @@ function render() {
         const [px, py] = frameToCanvas(pts[i][0], pts[i][1]);
         ctx.lineTo(px, py);
     }
-    ctx.strokeStyle = "#39d353";
+    ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.restore();
@@ -1408,19 +1455,10 @@ function render() {
         ctx.moveTo(lx, ly);
         ctx.lineTo(sx, sy);
         ctx.setLineDash([6, 4]);
-        ctx.strokeStyle = "#39d353";
+        ctx.strokeStyle = color;
         ctx.lineWidth = 1.5;
         ctx.stroke();
         ctx.setLineDash([]);
-    }
-
-    /* Vertex dots (every 8th point) */
-    ctx.fillStyle = "#39d353";
-    for (let i = 0; i < pts.length; i += 8) {
-        const [vx, vy] = frameToCanvas(pts[i][0], pts[i][1]);
-        ctx.beginPath();
-        ctx.arc(vx, vy, 2.5, 0, Math.PI * 2);
-        ctx.fill();
     }
 }
 
@@ -1429,8 +1467,7 @@ function render() {
    ============================================================ */
 canvas.addEventListener("pointerdown", (e) => {
     if (e.button === 2) {
-        state.lassoPoints = [];
-        clearPreview();
+        clearAllRegions();
         render();
         return;
     }
@@ -1449,8 +1486,7 @@ canvas.addEventListener("pointerdown", (e) => {
     state.isDrawing = true;
     const rect = canvas.getBoundingClientRect();
     const [fx, fy] = canvasToFrame(e.clientX - rect.left, e.clientY - rect.top);
-    state.lassoPoints = [[fx, fy]];
-    clearPreview();
+    state.currentLasso = [[fx, fy]];
     render();
 });
 
@@ -1467,13 +1503,13 @@ canvas.addEventListener("pointermove", (e) => {
     const [fx, fy] = canvasToFrame(e.clientX - rect.left, e.clientY - rect.top);
 
     /* Minimum distance check to keep point count manageable */
-    if (state.lassoPoints.length > 0) {
-        const last = state.lassoPoints[state.lassoPoints.length - 1];
+    if (state.currentLasso.length > 0) {
+        const last = state.currentLasso[state.currentLasso.length - 1];
         const dx = fx - last[0], dy = fy - last[1];
         if (dx * dx + dy * dy < 9) return;
     }
 
-    state.lassoPoints.push([fx, fy]);
+    state.currentLasso.push([fx, fy]);
     scheduleRender();
 });
 
@@ -1485,11 +1521,16 @@ canvas.addEventListener("pointerup", (e) => {
     }
     if (state.isDrawing) {
         state.isDrawing = false;
-        render();
-        /* Fetch live preview */
-        if (state.lassoPoints.length >= 3) {
+        /* Add completed lasso to regions if it has enough points */
+        if (state.currentLasso.length >= 3) {
+            state.regions.push({
+                points: state.currentLasso,
+                subtract: state.subtractMode,
+            });
+            state.currentLasso = [];
             fetchPreview();
         }
+        render();
     }
 });
 
@@ -1586,10 +1627,12 @@ document.addEventListener("keydown", (e) => {
             if (state.helpOpen) {
                 closeHelp();
             } else {
-                state.lassoPoints = [];
-                clearPreview();
+                clearAllRegions();
                 render();
             }
+            break;
+        case "x": case "X":
+            toggleSubtractMode();
             break;
         case "r": case "R":
             resetView();
@@ -1640,6 +1683,24 @@ $("#save-skip-cb").addEventListener("change", (e) => {
 });
 
 /* ============================================================
+   ADD / SUBTRACT MODE
+   ============================================================ */
+function toggleSubtractMode() {
+    state.subtractMode = !state.subtractMode;
+    updateModeDisplay();
+    showToast(state.subtractMode ? "Subtract mode" : "Add mode", "info");
+}
+
+function updateModeDisplay() {
+    const indicator = $("#mode-indicator");
+    const label = $("#mode-label");
+    indicator.className = "mode-indicator " + (state.subtractMode ? "mode-subtract" : "mode-add");
+    label.textContent = state.subtractMode ? "Subtract" : "Add";
+}
+
+$("#mode-btn").addEventListener("click", toggleSubtractMode);
+
+/* ============================================================
    FRAME NAVIGATION
    ============================================================ */
 $("#btn-prev").addEventListener("click", () => loadFrame(state.frame - state.skip));
@@ -1667,8 +1728,8 @@ $("#scrub-slider").addEventListener("input", (e) => {
    SAVE / EXPORT
    ============================================================ */
 async function saveCutout() {
-    if (state.lassoPoints.length < 3) {
-        showToast("Draw a lasso first (at least 3 points)", "error");
+    if (state.regions.length === 0) {
+        showToast("Draw a selection first", "error");
         return;
     }
     if (!state.selectedClass) {
@@ -1684,7 +1745,7 @@ async function saveCutout() {
             body: JSON.stringify({
                 frame: state.frame,
                 class_name: state.selectedClass,
-                points: state.lassoPoints,
+                regions: state.regions,
             }),
         });
 
@@ -1707,7 +1768,8 @@ async function saveCutout() {
             renderRecentSaves();
             updatePreviewWithSave(entry);
 
-            state.lassoPoints = [];
+            state.regions = [];
+            state.currentLasso = [];
             /* Don't revoke preview URL - it's shown in the preview panel */
             render();
             setStatus("Ready");
@@ -1757,14 +1819,14 @@ $("#preview-undo-btn").addEventListener("click", undoSave);
    PREVIEW
    ============================================================ */
 async function fetchPreview() {
-    if (state.lassoPoints.length < 3) return;
+    if (state.regions.length === 0) return;
     try {
         const res = await fetch("/api/preview", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 frame: state.frame,
-                points: state.lassoPoints,
+                regions: state.regions,
             }),
         });
         if (res.ok) {
@@ -1783,6 +1845,12 @@ function showPreviewImage(src) {
     img.src = src;
     img.style.display = "block";
     ph.style.display = "none";
+}
+
+function clearAllRegions() {
+    state.regions = [];
+    state.currentLasso = [];
+    clearPreview();
 }
 
 function clearPreview() {

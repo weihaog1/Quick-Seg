@@ -76,6 +76,19 @@ def _check_points(points):
     return np.array(points, dtype=np.int32), None
 
 
+def _check_regions(regions):
+    """Validate a list of {points, subtract} region objects."""
+    if not isinstance(regions, list) or len(regions) == 0:
+        return None, _err("Need at least one region")
+    parsed = []
+    for r in regions:
+        pts, err = _check_points(r.get("points", []))
+        if err:
+            return None, err
+        parsed.append({"pts": pts, "subtract": bool(r.get("subtract", False))})
+    return parsed, None
+
+
 _dirs_seeded = False
 
 def _seed_class_dirs():
@@ -118,6 +131,26 @@ def _apply_mask(frame, pts):
     rgba = cv2.cvtColor(frame[y:y+h, x:x+w], cv2.COLOR_BGR2BGRA)
     rgba[:, :, 3] = mask[y:y+h, x:x+w]
     return rgba, (w, h)
+
+
+def _apply_composite_mask(frame, regions):
+    """Build RGBA cutout from multiple add/subtract regions."""
+    mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+    # Apply add regions first, then subtract
+    for r in regions:
+        if not r["subtract"]:
+            cv2.fillPoly(mask, [r["pts"]], 255)
+    for r in regions:
+        if r["subtract"]:
+            cv2.fillPoly(mask, [r["pts"]], 0)
+    coords = np.where(mask > 0)
+    if len(coords[0]) == 0:
+        return None, None
+    y1, y2 = int(coords[0].min()), int(coords[0].max()) + 1
+    x1, x2 = int(coords[1].min()), int(coords[1].max()) + 1
+    rgba = cv2.cvtColor(frame[y1:y2, x1:x2], cv2.COLOR_BGR2BGRA)
+    rgba[:, :, 3] = mask[y1:y2, x1:x2]
+    return rgba, (x2 - x1, y2 - y1)
 
 
 def _next_id(class_dir, name):
@@ -332,12 +365,12 @@ def export_cutout():
     frame_num, class_name = data.get("frame"), data.get("class_name", "")
     if frame_num is None: return _err("Missing frame number")
     if not class_name or not SAFE_NAME.match(class_name): return _err("Invalid class name")
-    pts, err = _check_points(data.get("points", []))
+    regions, err = _check_regions(data.get("regions", []))
     if err: return err
     frame, err = _get_frame_or_err(frame_num)
     if err: return err
-    rgba, size = _apply_mask(frame, pts)
-    if rgba is None: return _err("Polygon has zero area")
+    rgba, size = _apply_composite_mask(frame, regions)
+    if rgba is None: return _err("Selection has zero area")
     _seed_class_dirs()
     class_dir = Path(OUTPUT_DIR) / class_name
     class_dir.mkdir(parents=True, exist_ok=True)
@@ -358,12 +391,12 @@ def preview_cutout():
     data = request.json or {}
     frame_num = data.get("frame")
     if frame_num is None: return _err("Missing frame number")
-    pts, err = _check_points(data.get("points", []))
+    regions, err = _check_regions(data.get("regions", []))
     if err: return err
     frame, err = _get_frame_or_err(frame_num)
     if err: return err
-    rgba, _ = _apply_mask(frame, pts)
-    if rgba is None: return _err("Polygon has zero area")
+    rgba, _ = _apply_composite_mask(frame, regions)
+    if rgba is None: return _err("Selection has zero area")
     _, buf = cv2.imencode(".png", rgba)
     return Response(buf.tobytes(), mimetype="image/png")
 
