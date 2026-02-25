@@ -406,6 +406,24 @@ body {
     text-align: center;
 }
 
+/* -- Section Toggle -- */
+.section-title-toggle {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.section-title-toggle:hover { color: var(--text-secondary); }
+
+.section-chevron {
+    transition: transform var(--transition);
+}
+
+.section-chevron.open {
+    transform: rotate(90deg);
+}
+
 /* -- Quick Help -- */
 .help-card {
     background: var(--bg-elevated);
@@ -924,10 +942,13 @@ canvas {
             </div>
         </div>
 
-        <!-- Quick Help -->
+        <!-- Quick Help (collapsed by default) -->
         <div class="sidebar-section">
-            <div class="section-title">Shortcuts</div>
-            <div class="help-card">
+            <div class="section-title section-title-toggle" id="shortcuts-toggle">
+                Shortcuts
+                <svg class="section-chevron" id="shortcuts-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2l4 3-4 3"/></svg>
+            </div>
+            <div class="help-card" id="shortcuts-card" style="display:none;">
                 <div class="help-row"><kbd>S</kbd> Save cutout</div>
                 <div class="help-row"><kbd>Esc</kbd> Clear drawing</div>
                 <div class="help-row"><kbd>&larr;&rarr;</kbd> Navigate frames</div>
@@ -1881,6 +1902,14 @@ function closeHelp() {
 }
 
 $("#btn-help").addEventListener("click", openHelp);
+
+$("#shortcuts-toggle").addEventListener("click", () => {
+    const card = $("#shortcuts-card");
+    const chevron = $("#shortcuts-chevron");
+    const visible = card.style.display !== "none";
+    card.style.display = visible ? "none" : "";
+    chevron.classList.toggle("open", !visible);
+});
 
 $("#btn-switch-video").addEventListener("click", async (e) => {
     e.preventDefault();
