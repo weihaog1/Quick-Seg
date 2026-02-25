@@ -1502,7 +1502,14 @@ function updateZoomDisplay() {
 }
 
 $("#zoom-slider").addEventListener("input", (e) => {
+    const oldZoom = state.zoom;
     state.zoom = parseInt(e.target.value) / 100;
+    /* Pivot around canvas center */
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const ratio = state.zoom / oldZoom;
+    state.panX = cx - ratio * (cx - state.panX);
+    state.panY = cy - ratio * (cy - state.panY);
     $("#hdr-zoom").textContent = Math.round(state.zoom * 100) + "%";
     render();
 });
