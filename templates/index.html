@@ -235,27 +235,21 @@ body {
     color: var(--text-secondary);
 }
 
-.skip-btns {
-    display: flex;
-    gap: 4px;
-}
-
-.skip-btn {
-    height: 24px;
-    min-width: 28px;
-    padding: 0 6px;
+.skip-input {
+    width: 64px;
+    height: 28px;
     background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-family: var(--font-mono);
-    font-size: 11px;
-    cursor: pointer;
-    transition: all var(--transition);
+    font-size: 13px;
+    text-align: center;
+    outline: none;
+    transition: border-color var(--transition);
 }
 
-.skip-btn:hover { border-color: var(--accent); color: var(--text-primary); }
-.skip-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.skip-input:focus { border-color: var(--accent); }
 
 /* -- Class Selector -- */
 .class-search-wrap {
@@ -845,12 +839,7 @@ canvas {
             <div class="frame-time" id="frame-time">00:00.0</div>
             <div class="skip-row">
                 <span class="skip-label">Skip:</span>
-                <div class="skip-btns" id="skip-btns">
-                    <button class="skip-btn active" data-skip="1">1</button>
-                    <button class="skip-btn" data-skip="5">5</button>
-                    <button class="skip-btn" data-skip="10">10</button>
-                    <button class="skip-btn" data-skip="30">30</button>
-                </div>
+                <input type="number" class="skip-input" id="skip-input" value="1" min="1" max="9999">
             </div>
         </div>
 
@@ -1529,15 +1518,14 @@ function resetView() {
    SKIP CONTROLS
    ============================================================ */
 function setSkip(n) {
+    n = Math.max(1, Math.floor(n) || 1);
     state.skip = n;
-    $$(".skip-btn").forEach(btn => {
-        btn.classList.toggle("active", parseInt(btn.dataset.skip) === n);
-    });
+    $("#skip-input").value = n;
     updateStatusRight();
 }
 
-$$(".skip-btn").forEach(btn => {
-    btn.addEventListener("click", () => setSkip(parseInt(btn.dataset.skip)));
+$("#skip-input").addEventListener("change", (e) => {
+    setSkip(parseInt(e.target.value) || 1);
 });
 
 /* ============================================================
