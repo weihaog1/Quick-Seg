@@ -1510,7 +1510,7 @@ canvas.addEventListener("wheel", (e) => {
     const fx = (mx - tOld.ox) / tOld.scale;
     const fy = (my - tOld.oy) / tOld.scale;
 
-    state.zoom = Math.max(0.25, Math.min(10, state.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+    state.zoom = Math.max(0.25, Math.min(10, state.zoom * (e.deltaY > 0 ? 0.97 : 1.03)));
 
     /* Solve for pan so the same frame coord stays under mouse */
     const baseScale = Math.min(canvas.width / state.video.width, canvas.height / state.video.height);
