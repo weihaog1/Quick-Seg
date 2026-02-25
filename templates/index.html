@@ -1484,12 +1484,18 @@ canvas.addEventListener("wheel", (e) => {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
-    const oldZoom = state.zoom;
+    /* Get frame coordinate under mouse before zoom */
+    const tOld = getTransform();
+    const fx = (mx - tOld.ox) / tOld.scale;
+    const fy = (my - tOld.oy) / tOld.scale;
+
     state.zoom = Math.max(0.25, Math.min(10, state.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
 
-    const ratio = state.zoom / oldZoom;
-    state.panX = mx - ratio * (mx - state.panX);
-    state.panY = my - ratio * (my - state.panY);
+    /* Solve for pan so the same frame coord stays under mouse */
+    const baseScale = Math.min(canvas.width / state.video.width, canvas.height / state.video.height);
+    const sNew = baseScale * state.zoom;
+    state.panX = mx - fx * sNew - (canvas.width - state.video.width * sNew) / 2;
+    state.panY = my - fy * sNew - (canvas.height - state.video.height * sNew) / 2;
 
     updateZoomDisplay();
     render();
@@ -1502,14 +1508,21 @@ function updateZoomDisplay() {
 }
 
 $("#zoom-slider").addEventListener("input", (e) => {
-    const oldZoom = state.zoom;
-    state.zoom = parseInt(e.target.value) / 100;
-    /* Pivot around canvas center */
+    /* Get frame coord at canvas center before zoom */
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-    const ratio = state.zoom / oldZoom;
-    state.panX = cx - ratio * (cx - state.panX);
-    state.panY = cy - ratio * (cy - state.panY);
+    const tOld = getTransform();
+    const fx = (cx - tOld.ox) / tOld.scale;
+    const fy = (cy - tOld.oy) / tOld.scale;
+
+    state.zoom = parseInt(e.target.value) / 100;
+
+    /* Solve for pan so canvas center stays on the same frame coord */
+    const baseScale = Math.min(canvas.width / state.video.width, canvas.height / state.video.height);
+    const sNew = baseScale * state.zoom;
+    state.panX = cx - fx * sNew - (canvas.width - state.video.width * sNew) / 2;
+    state.panY = cy - fy * sNew - (canvas.height - state.video.height * sNew) / 2;
+
     $("#hdr-zoom").textContent = Math.round(state.zoom * 100) + "%";
     render();
 });
