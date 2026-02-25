@@ -1403,34 +1403,77 @@ function render() {
     const t = getTransform();
     ctx.drawImage(state.frameImage, t.ox, t.oy, state.video.width * t.scale, state.video.height * t.scale);
 
-    /* Draw all completed regions */
-    state.regions.forEach(r => drawRegion(r.points, r.subtract, false));
+    /* Build composite selection: add regions then subtract regions.
+       Use an offscreen canvas as a mask so subtracts cut clean holes. */
+    const allRegions = state.regions.slice();
+    /* Include current lasso as a temporary region while drawing */
+    const drawingActive = state.isDrawing && state.currentLasso.length >= 2;
 
-    /* Draw current lasso being drawn */
-    if (state.currentLasso.length >= 2) {
-        drawRegion(state.currentLasso, state.subtractMode, state.isDrawing);
+    const hasRegions = allRegions.length > 0 || (drawingActive && !state.subtractMode);
+    if (hasRegions || drawingActive) {
+        /* Offscreen mask: white = selected, black = not */
+        const offscreen = document.createElement("canvas");
+        offscreen.width = canvas.width;
+        offscreen.height = canvas.height;
+        const mctx = offscreen.getContext("2d");
+
+        /* Paint add regions */
+        allRegions.forEach(r => {
+            if (!r.subtract && r.points.length >= 3) {
+                drawPolyOnCtx(mctx, r.points, true);
+            }
+        });
+
+        /* Paint subtract regions (erase from mask) */
+        mctx.globalCompositeOperation = "destination-out";
+        allRegions.forEach(r => {
+            if (r.subtract && r.points.length >= 3) {
+                drawPolyOnCtx(mctx, r.points, true);
+            }
+        });
+        mctx.globalCompositeOperation = "source-over";
+
+        /* Apply the mask as a green overlay on the main canvas */
+        ctx.save();
+        ctx.globalAlpha = 0.15;
+        ctx.drawImage(offscreen, 0, 0);
+        ctx.globalAlpha = 1.0;
+        ctx.restore();
+
+        /* Draw outlines for add regions (green) */
+        allRegions.forEach(r => {
+            if (!r.subtract && r.points.length >= 3) {
+                drawLassoStroke(r.points, "#39d353", "rgba(57, 211, 83, 0.5)", false);
+            }
+        });
+    }
+
+    /* Draw current lasso stroke while drawing */
+    if (drawingActive) {
+        const color = state.subtractMode ? "#f85149" : "#39d353";
+        const glow = state.subtractMode ? "rgba(248, 81, 73, 0.5)" : "rgba(57, 211, 83, 0.5)";
+        drawLassoStroke(state.currentLasso, color, glow, true);
     }
 }
 
-function drawRegion(pts, isSubtract, isActive) {
-    if (pts.length < 2) return;
-    const color = isSubtract ? "#f85149" : "#39d353";
-    const fillColor = isSubtract ? "rgba(248, 81, 73, 0.12)" : "rgba(57, 211, 83, 0.12)";
-    const glowColor = isSubtract ? "rgba(248, 81, 73, 0.5)" : "rgba(57, 211, 83, 0.5)";
+function drawPolyOnCtx(c, pts, fill) {
     const [sx, sy] = frameToCanvas(pts[0][0], pts[0][1]);
-
-    /* Fill (completed regions only) */
-    if (pts.length >= 3 && !isActive) {
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        for (let i = 1; i < pts.length; i++) {
-            const [px, py] = frameToCanvas(pts[i][0], pts[i][1]);
-            ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.fillStyle = fillColor;
-        ctx.fill();
+    c.beginPath();
+    c.moveTo(sx, sy);
+    for (let i = 1; i < pts.length; i++) {
+        const [px, py] = frameToCanvas(pts[i][0], pts[i][1]);
+        c.lineTo(px, py);
     }
+    c.closePath();
+    if (fill) {
+        c.fillStyle = "#39d353";
+        c.fill();
+    }
+}
+
+function drawLassoStroke(pts, color, glowColor, isActive) {
+    if (pts.length < 2) return;
+    const [sx, sy] = frameToCanvas(pts[0][0], pts[0][1]);
 
     /* Stroke with glow */
     ctx.save();
@@ -1442,13 +1485,14 @@ function drawRegion(pts, isSubtract, isActive) {
         const [px, py] = frameToCanvas(pts[i][0], pts[i][1]);
         ctx.lineTo(px, py);
     }
+    if (!isActive) ctx.closePath();
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.restore();
 
-    /* Dashed closing line */
-    if (pts.length >= 3) {
+    /* Dashed closing line while drawing */
+    if (isActive && pts.length >= 3) {
         const last = pts[pts.length - 1];
         const [lx, ly] = frameToCanvas(last[0], last[1]);
         ctx.beginPath();
