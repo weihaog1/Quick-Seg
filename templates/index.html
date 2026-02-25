@@ -458,6 +458,7 @@ canvas {
     width: 100%;
     height: 100%;
     cursor: crosshair;
+    touch-action: none;
 }
 
 .canvas-loading {
@@ -1348,9 +1349,9 @@ function render() {
 }
 
 /* ============================================================
-   MOUSE EVENTS (Drawing + Pan)
+   POINTER EVENTS (Drawing + Pan) - works with mouse, pen, touch
    ============================================================ */
-canvas.addEventListener("mousedown", (e) => {
+canvas.addEventListener("pointerdown", (e) => {
     if (e.button === 2) {
         state.lassoPoints = [];
         clearPreview();
@@ -1358,6 +1359,8 @@ canvas.addEventListener("mousedown", (e) => {
         return;
     }
     if (e.button !== 0) return;
+
+    canvas.setPointerCapture(e.pointerId);
 
     if (state.spaceDown) {
         state.isPanning = true;
@@ -1375,7 +1378,7 @@ canvas.addEventListener("mousedown", (e) => {
     render();
 });
 
-canvas.addEventListener("mousemove", (e) => {
+canvas.addEventListener("pointermove", (e) => {
     if (state.isPanning) {
         state.panX = e.clientX - state.panStartX;
         state.panY = e.clientY - state.panStartY;
@@ -1398,7 +1401,7 @@ canvas.addEventListener("mousemove", (e) => {
     scheduleRender();
 });
 
-canvas.addEventListener("mouseup", (e) => {
+canvas.addEventListener("pointerup", (e) => {
     if (state.isPanning) {
         state.isPanning = false;
         canvas.style.cursor = state.spaceDown ? "grab" : "crosshair";
