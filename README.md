@@ -2,7 +2,7 @@
 
 A browser-based tool for creating transparent sprite cutouts from gameplay video. Load a video, draw selections around sprites, and export them as RGBA PNGs organized by class.
 
-Built for creating training data for object detection models (Clash Royale sprite segmentation).
+Created as part of our [CS 175 (Project in AI)](https://royf.org/crs/CS175/W26) course at UC Irvine, Winter 2026. We needed a way to quickly segment sprite cutouts from Clash Royale gameplay footage to build training data for our object detection model, and couldn't find an existing tool that did this well -- so we built one.
 
 ## Setup
 
