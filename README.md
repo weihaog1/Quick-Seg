@@ -1,131 +1,166 @@
-# Sprite Cutout Creator
+# Quick-Seg - Sprite Cutout Creator
 
-A browser-based tool for creating RGBA sprite cutouts from gameplay video. Draw lasso selections around sprites to export them as transparent PNGs, organized by class.
+A browser-based tool for creating transparent sprite cutouts from gameplay video. Load a video, draw selections around sprites, and export them as RGBA PNGs organized by class.
 
-## Windows Setup (Step by Step)
+Built for creating training data for object detection models (Clash Royale sprite segmentation).
 
-### 1. Install Python
+## Setup
 
-Download Python 3.8+ from [python.org](https://www.python.org/downloads/). During installation, **check "Add Python to PATH"**.
+### Prerequisites
 
-Verify it works by opening Command Prompt (`Win+R`, type `cmd`, press Enter):
+- Python 3.8 or newer
 
-```
-python --version
-```
+**Windows:** Download from [python.org](https://www.python.org/downloads/). During installation, check **"Add Python to PATH"**. Verify with `python --version` in Command Prompt.
 
-You should see something like `Python 3.11.x`. If you get "not recognized", restart your terminal or reinstall Python with the PATH option checked.
+**Mac/Linux:** Python is usually pre-installed. Check with `python3 --version`.
 
-### 2. Download the Project
+### Install
 
-Option A - Git:
 ```
 git clone https://github.com/weihaog1/Quick-Seg.git
 cd Quick-Seg
-```
-
-Option B - No Git: Go to https://github.com/weihaog1/Quick-Seg, click the green **Code** button, click **Download ZIP**, extract it, then open Command Prompt and `cd` into the extracted folder:
-```
-cd C:\Users\YourName\Downloads\Quick-Seg-main
-```
-
-### 3. Install Dependencies
-
-```
 pip install -r requirements.txt
 ```
 
-This installs Flask, OpenCV, and NumPy. If `pip` is not recognized, try `python -m pip install -r requirements.txt`.
+Or download the ZIP from the GitHub page, extract it, and run `pip install -r requirements.txt` inside the folder.
 
-### 4. Run the App
+If `pip` is not recognized, try `python -m pip install -r requirements.txt`.
+
+### Run
 
 ```
 python app.py
 ```
 
-Your browser will open automatically to the setup page at `http://localhost:5000`.
+Your browser opens to the setup page. From there:
 
-If port 5000 is taken, use a different port:
-```
-python app.py --port 8080
-```
+1. **Choose a video** - drag and drop a file onto the upload zone, or pick one from the server list
+2. **Set the output folder** - type a path or click **Browse** to navigate your filesystem
+3. Click **Start Annotating**
 
-### 5. Configure and Start
+## How to Use
 
-On the setup page:
+### Drawing Selections
 
-1. **Upload a video** - Drag and drop a `.mp4`/`.avi`/`.mkv`/`.mov`/`.webm` file onto the upload zone, or click to browse. Alternatively, select a video already on your machine from the server list.
-2. **Set the output directory** - Type a path (e.g., `C:\Users\YourName\Desktop\sprites`) or click **Browse** to pick a folder.
-3. Click **Start Annotating**.
+- **Click and drag** on the frame to draw a lasso around a sprite
+- Each new lasso **adds to** the existing selection (multiple regions accumulate)
+- Press **X** to switch to **subtract mode** - draw over the green area to cut holes out of it
+- Press **X** again to go back to **add mode**
+- The header shows the current mode (green dot = add, red dot = subtract)
+- Subtract regions erase instantly from the green overlay when you release the mouse
+- You can add back over a previously subtracted area
 
-### 6. Annotate
+### Saving Cutouts
 
-- **Draw** a lasso around a sprite by clicking and dragging
-- **Select a class** from the sidebar or press `1`-`8` for the deck classes
-- **Press `S`** to save the cutout
-- **Arrow keys** to navigate frames
-- **Switch Video** link in the header to go back to setup
+1. Draw your selection (green overlay shows what will be exported)
+2. Pick a class from the sidebar, or press **1-8** to quick-select
+3. Press **S** to save
 
-## CLI Arguments
+The cutout is exported as a transparent PNG into the output folder, organized by class name.
 
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `--video` | _(none)_ | Path to video file. If both `--video` and `--output` are given, skips the setup page. |
-| `--output` | _(none)_ | Output directory for cutout PNGs. |
-| `--port` | `5000` | Port to run the server on. |
-| `--host` | `0.0.0.0` | Bind address. Use `127.0.0.1` for localhost-only. |
-| `--videos-dir` | `.` | Directory to browse for server-side videos on the setup page. |
-| `--uploads-dir` | `./uploads` | Directory where uploaded videos are saved. |
-| `--no-browser` | _(flag)_ | Don't auto-open the browser on start. |
+### Navigation
 
-## Examples
+- **Left/Right arrow** keys move between frames
+- **Skip input** in the sidebar lets you set a custom frame step (type any number)
+- **Save + skip** toggle: when enabled, saving a cutout automatically advances by the skip amount
 
-```bash
-# Interactive setup (default)
-python app.py
+### Zoom and Pan
 
-# Direct mode (skip setup page)
-python app.py --video gameplay.mp4 --output ./output
+- **Alt + scroll** (Option + scroll on Mac) zooms toward your mouse cursor
+- **Zoom slider** in the header for precise control
+- **Space + drag** to pan the view
+- **R** to reset zoom and center the frame
 
-# Browse videos from a specific folder
-python app.py --videos-dir C:\Users\YourName\Videos
+### Switching Videos
 
-# Specify everything up front
-python app.py --video gameplay.mp4 --output ./sprites --port 8080
-```
+Click the **Switch Video** link in the header to go back to the setup page without restarting the server.
+
+### Pen / Stylus Support
+
+Works with Windows pen input and tablet styluses out of the box (uses Pointer Events API).
 
 ## Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
-| `S` | Save the current cutout |
-| `1`-`8` | Select class by number |
-| `Escape` | Clear drawing / close modal |
-| `Left/Right` | Previous / next frame |
+| `S` | Save cutout |
+| `X` | Toggle add / subtract mode |
+| `Escape` | Clear all selections (or close modal) |
+| `Left` / `Right` | Previous / next frame |
+| `1` - `8` | Select class by number |
 | `Alt` + `Scroll` | Zoom in / out |
 | `Space` + drag | Pan the view |
 | `R` | Reset zoom and pan |
 | `Ctrl+Z` | Undo last save |
-| `?` | Show all shortcuts |
+| `?` | Show shortcuts modal |
 
 ## Output Format
 
-Cutouts are saved as RGBA PNGs organized by class:
-
 ```
 output/
-  class_name/
-    class_name_0_CUSTOM_000.png
-    class_name_0_CUSTOM_001.png
-    ...
+  arrows/
+    arrows_0_CUSTOM_000.png
+    arrows_0_CUSTOM_001.png
+  royal-hogs/
+    royal-hogs_0_CUSTOM_000.png
+  ...
 ```
 
-Each PNG has a transparent background with only the lasso-selected region visible.
+Each PNG has a transparent background. Only the lasso-selected pixels are visible. On first save, all 8 class folders are created automatically:
+
+1. arrows
+2. barbarian-barrel
+3. electro-spirit
+4. flying-machine
+5. goblin-cage
+6. royal-hogs
+7. royal-recruits
+8. zappies
+
+You can also create custom classes by typing a new name in the sidebar search box.
+
+## CLI Options
+
+```
+python app.py [options]
+```
+
+| Option | Default | What it does |
+|--------|---------|--------------|
+| `--video PATH` | _(none)_ | Video file path. If both `--video` and `--output` are given, skips the setup page. |
+| `--output PATH` | _(none)_ | Output directory for saved PNGs. |
+| `--port N` | `5000` | Server port. |
+| `--host ADDR` | `0.0.0.0` | Bind address. Use `127.0.0.1` for localhost only. |
+| `--videos-dir PATH` | `.` | Folder to list server-side videos from on the setup page. |
+| `--uploads-dir PATH` | `./uploads` | Where uploaded videos are saved. |
+| `--no-browser` | _(flag)_ | Don't auto-open the browser. |
+
+### Examples
+
+```bash
+# Default: opens setup page in browser
+python app.py
+
+# Skip setup, go straight to annotating
+python app.py --video gameplay.mp4 --output ./output
+
+# Point at a folder of videos so they show up in the setup page list
+python app.py --videos-dir ~/Videos
+
+# Use a different port
+python app.py --port 8080
+
+# Run on a remote machine (access from another device on the network)
+python app.py --host 0.0.0.0 --no-browser
+```
 
 ## Troubleshooting
 
-- **"python is not recognized"** - Reinstall Python and check "Add Python to PATH", or use the full path: `C:\Users\YourName\AppData\Local\Programs\Python\Python311\python.exe`
-- **"pip is not recognized"** - Use `python -m pip install -r requirements.txt`
-- **Port already in use** - Use `--port 8080` or another free port
-- **Browser doesn't open** - Manually go to `http://localhost:5000` (or whatever port you chose)
-- **Video won't load** - Make sure the file is a supported format (.mp4, .avi, .mkv, .mov, .webm) and not corrupted
+| Problem | Fix |
+|---------|-----|
+| `python is not recognized` | Reinstall Python with "Add to PATH" checked, or use the full path to python.exe |
+| `pip is not recognized` | Use `python -m pip install -r requirements.txt` |
+| Port already in use | Use `--port 8080` or another free port |
+| Browser doesn't open | Go to `http://localhost:5000` manually |
+| Video won't load | Check the file is .mp4, .avi, .mkv, .mov, or .webm and not corrupted |
+| Pen/stylus not working | Make sure you're drawing directly on the canvas area, not the sidebar |
