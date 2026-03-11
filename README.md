@@ -164,3 +164,7 @@ python app.py --host 0.0.0.0 --no-browser
 | Browser doesn't open | Go to `http://localhost:5000` manually |
 | Video won't load | Check the file is .mp4, .avi, .mkv, .mov, or .webm and not corrupted |
 | Pen/stylus not working | Make sure you're drawing directly on the canvas area, not the sidebar |
+
+## License
+
+MIT -- see [LICENSE](LICENSE) for details.
